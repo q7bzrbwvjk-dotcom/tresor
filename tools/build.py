@@ -11,7 +11,7 @@ import hashlib, pathlib, re
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SRC = ROOT / "src"
 VERSION = (ROOT / "VERSION").read_text().strip()
-REPO_URL = "https://github.com/q7bzrbwvjk-dotcom/tresor"
+REPO_URL = "https://github.com/techflow-it/tresor"
 
 JS_ORDER = [
     "ui/i18n.js", "crypto/cryptofb.js", "crypto/crypto.js", "crypto/argon2.js", "kdbx/kdbx.js", "crypto/otp.js",

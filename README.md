@@ -4,7 +4,7 @@
 
 ![Tresor overview](docs/overview.png)
 
-> **Try it:** [https://q7bzrbwvjk-dotcom.github.io/tresor/](https://q7bzrbwvjk-dotcom.github.io/tresor/) · **Download:** [latest release](https://github.com/q7bzrbwvjk-dotcom/tresor/releases/latest)
+> **Try it:** [https://techflow-it.github.io/tresor/](https://techflow-it.github.io/tresor/) · **Download:** [latest release](https://github.com/techflow-it/tresor/releases/latest)
 >
 > The user interface is available in **English** and **German**. It follows your browser language and can be switched on the start screen or in Settings.
 
@@ -32,7 +32,7 @@
 
 ## Getting started
 
-1. Download `Tresor.html` from the [latest release](https://github.com/q7bzrbwvjk-dotcom/tresor/releases/latest) and open it in a current browser – or use the [hosted version](https://q7bzrbwvjk-dotcom.github.io/tresor/).
+1. Download `Tresor.html` from the [latest release](https://github.com/techflow-it/tresor/releases/latest) and open it in a current browser – or use the [hosted version](https://techflow-it.github.io/tresor/).
 2. Choose an existing `.kdbx` file or create a new database.
 3. Changes are saved by downloading the updated file (Safari, Brave) or written back directly (Chrome, Edge).
 

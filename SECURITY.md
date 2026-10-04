@@ -4,7 +4,7 @@
 
 **Please do not open public issues for security problems.**
 
-Report vulnerabilities privately via **[Report a vulnerability](https://github.com/q7bzrbwvjk-dotcom/tresor/security/advisories/new)** on GitHub. You will receive a response within 7 days. Once a fix is released, the issue is disclosed together with credit to the reporter, at the latest 90 days after the report unless agreed otherwise.
+Report vulnerabilities privately via **[Report a vulnerability](https://github.com/techflow-it/tresor/security/advisories/new)** on GitHub. You will receive a response within 7 days. Once a fix is released, the issue is disclosed together with credit to the reporter, at the latest 90 days after the report unless agreed otherwise.
 
 ## Supported versions
 

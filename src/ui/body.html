@@ -2,7 +2,7 @@
   <div class="pane">
     <h1>Tresor</h1>
     <p class="lead">Deine KeePass-Datenbank, lokal im Browser. Nichts verlässt dieses Gerät.</p>
-    <div class="secwarn hidden" id="secWarn"><b>Unverschlüsselte Verbindung (HTTP)</b><span>Tresor funktioniert, aber jemand im selben Netzwerk könnte diese Seite unterwegs verändern und so dein Master-Passwort abgreifen. Öffne Tresor besser über <b>HTTPS</b> – in Home Assistant z.&nbsp;B. über das Tailscale-Add-on mit HTTPS oder ein eigenes Zertifikat – oder als lokal gespeicherte Datei.</span></div>
+    <div class="secwarn hidden" id="secWarn"><b>Unverschlüsselte Verbindung (HTTP)</b><span data-t="secwarn">Tresor funktioniert, aber jemand im selben Netzwerk könnte diese Seite unterwegs verändern und so dein Master-Passwort abgreifen. Öffne Tresor besser über <b>HTTPS</b> – in Home Assistant z.&nbsp;B. über das Tailscale-Add-on mit HTTPS oder ein eigenes Zertifikat – oder als lokal gespeicherte Datei.</span></div>
     <div class="tabs" role="tablist">
       <button role="tab" aria-selected="true" data-tab="open">Öffnen</button>
       <button role="tab" aria-selected="false" data-tab="new">Neu erstellen</button>
@@ -39,6 +39,7 @@
       <div class="err" id="newErr"></div>
       <p class="note">Erstellt eine KDBX-4-Datei (AES-256, Argon2d), die sich auch in KeePass, KeePassXC und Strongbox öffnen lässt.</p>
     </form>
+    <div class="langsw"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z"/></svg><select class="input" id="langSel" aria-label="Sprache / Language"></select></div>
   </div>
   <div class="dialwrap" aria-hidden="true">
     <svg id="dial" viewBox="0 0 400 400"></svg>

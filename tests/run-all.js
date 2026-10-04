@@ -7,9 +7,9 @@ const fs = require('fs'), path = require('path'), nc = require('crypto');
 const ROOT = path.resolve(__dirname, '..');
 const load = f => fs.readFileSync(path.join(ROOT, 'src', f), 'utf8');
 // Load the non-UI modules into this scope (they are plain browser scripts without exports).
-(0, eval)([ 'crypto/cryptofb.js', 'crypto/crypto.js', 'crypto/argon2.js', 'kdbx/kdbx.js', 'kdbx/merge.js', 'kdbx/csv.js', 'crypto/qr.js', 'crypto/otp.js' ].map(load).join('\n')
+(0, eval)([ 'ui/i18n.js', 'ui/words.js', 'crypto/cryptofb.js', 'crypto/crypto.js', 'crypto/argon2.js', 'kdbx/kdbx.js', 'kdbx/merge.js', 'kdbx/csv.js', 'crypto/qr.js', 'crypto/otp.js' ].map(load).join('\n')
   + ';globalThis.A=argon2Factory();globalThis.argon2Run=async(p,cb)=>A.argon2({...p,onProgress:cb});'
-  + 'Object.assign(globalThis,{JSC,kdbxCreate,kdbxSave,kdbxOpen,mergeDb,X,xmlSerialize,timeStr,parseTime,newUuid,timesEl,writeVarDict,runKdf,compositeKey,unhex,hex,makeStream,csvParse,csvRecords,csvDetect,qrEncode,aesKdf,totpCode,parseOtpString});');
+  + 'Object.assign(globalThis,{EN,WORDS_EN,JSC,kdbxCreate,kdbxSave,kdbxOpen,mergeDb,X,xmlSerialize,timeStr,parseTime,newUuid,timesEl,writeVarDict,runKdf,compositeKey,unhex,hex,makeStream,csvParse,csvRecords,csvDetect,qrEncode,aesKdf,totpCode,parseOtpString});');
 
 let pass = 0, fail = 0;
 const ok = (name, cond) => { if (cond) pass++; else { fail++; console.log('  FAIL', name); } };
@@ -87,6 +87,26 @@ const OUT = path.join(__dirname, 'out'); fs.mkdirSync(OUT, { recursive: true });
   const cases = [['folder,favorite,type,name,notes,fields,reprompt,login_uri,login_username,login_password,login_totp\nWork,,login,Example,,,0,https://example.com,alice,"p,w",', 'Bitwarden'],
     ['url,username,password,totp,extra,name,grouping,fav\nhttps://example.com,a,b,,,X,Shop,0', 'LastPass'], ['name,url,username,password,note\n,https://www.example.com/login,alice,p1,', 'Chrome/Brave/Edge']];
   for (const [csv, fmt] of cases) { const rows = csvParse(csv); ok('csv ' + fmt, csvDetect(rows[0]) === fmt && csvRecords(rows).records.length === 1); }
+
+  console.log('Translations');
+  // Every German text passed to T() in the sources (and every static text in body.html) needs an English entry in EN.
+  const literals = arg => [...arg.matchAll(/'((?:[^'\\]|\\.)*)'/g)].map(m => m[1].replace(/\\(.)/g, '$1')).filter(Boolean);
+  const firstArg = (s, i) => { let d = 0, q = null; for (let j = i; j < s.length; j++) { const c = s[j];
+    if (q) { if (c === '\\') j++; else if (c === q) q = null; } else if ('\'"`'.includes(c)) q = c; else if ('([{'.includes(c)) d++;
+    else if (')]}'.includes(c)) { if (!d) return s.slice(i, j); d--; } else if (c === ',' && !d) return s.slice(i, j); } return ''; };
+  const keys = new Set();
+  for (const f of ['ui', 'kdbx', 'crypto'].flatMap(d => fs.readdirSync(path.join(ROOT, 'src', d)).filter(x => x.endsWith('.js')).map(x => d + '/' + x))) {
+    const s = load(f).replace(/^\s*\/\/.*$/gm, '');
+    for (const m of s.matchAll(/(?<![\w$.])T\(/g)) for (const k of literals(firstArg(s, m.index + 2))) keys.add(k); }
+  const html = load('ui/body.html').replace(/<span data-t="[^"]*">[^<]*(<b>[^<]*<\/b>[^<]*)*<\/span>/g, '');
+  for (const m of html.matchAll(/>([^<>]*[A-Za-zÄÖÜäöüß][^<>]*)</g)) { const t = m[1].trim(); if (t && !/^(Tresor|HTTPS?)$/.test(t)) keys.add(t); }
+  for (const m of html.matchAll(/(?:title|placeholder|aria-label)="([^"]+)"/g)) keys.add(m[1]);
+  const missing = [...keys].filter(k => !Object.prototype.hasOwnProperty.call(EN, k));
+  ok('every text has an English translation' + (missing.length ? ': ' + missing.join(' | ') : ''), !missing.length);
+  ok(`${keys.size} texts found`, keys.size > 500);
+  ok('T is not shadowed by local variables', !['ui', 'kdbx', 'crypto'].flatMap(d => fs.readdirSync(path.join(ROOT, 'src', d)).filter(x => x.endsWith('.js')).map(x => load(d + '/' + x))).some(s => /\b(const|let|var)\s+T\s*=|function\s*\w*\([^)]*\bT\b[^)]*\)\s*\{[^}]*\bT\(/.test(s)));
+  ok('placeholders match', Object.entries(EN).every(([de, en]) => [...de.matchAll(/\{\w+\}/g)].map(String).sort().join() === [...en.matchAll(/\{\w+\}/g)].map(String).sort().join()));
+  ok('English passphrase list', WORDS_EN.length >= 1232 && new Set(WORDS_EN).size === WORDS_EN.length && WORDS_EN.every(w => /^[a-z]{3,10}$/.test(w)));
 
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

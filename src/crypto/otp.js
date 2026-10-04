@@ -4,12 +4,12 @@
 // ===== TOTP (2FA) – kompatibel mit KeePassXC (otp), KeePass 2.47+ (TimeOtp-*) und KeeOtp (TOTP Seed) =====
 const OTP_KEYS=['otp','TimeOtp-Secret','TimeOtp-Secret-Base32','TimeOtp-Secret-Hex','TimeOtp-Secret-Base64','TimeOtp-Length','TimeOtp-Period','TimeOtp-Algorithm','TOTP Seed','TOTP Settings'];
 function base32dec(s){s=s.toUpperCase().replace(/[\s=-]/g,'');const AL='ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';let bits=0,val=0;const out=[];
-  for(const c of s){const i=AL.indexOf(c);if(i<0)throw new Error('Der Schlüssel enthält ungültige Zeichen.');val=((val<<5)|i)&0xffff;bits+=5;if(bits>=8){out.push((val>>>(bits-8))&255);bits-=8;}}
-  if(!out.length)throw new Error('Der Schlüssel ist leer.');return new Uint8Array(out);}
+  for(const c of s){const i=AL.indexOf(c);if(i<0)throw new Error(T('Der Schlüssel enthält ungültige Zeichen.'));val=((val<<5)|i)&0xffff;bits+=5;if(bits>=8){out.push((val>>>(bits-8))&255);bits-=8;}}
+  if(!out.length)throw new Error(T('Der Schlüssel ist leer.'));return new Uint8Array(out);}
 function parseOtpString(o){
   o=o.trim();
   if(/^otpauth:\/\//i.test(o)){const q=o.split('?')[1]||'';const p=new URLSearchParams(q);
-    if(/^otpauth:\/\/hotp/i.test(o))throw new Error('Nur zeitbasierte Codes (TOTP) werden unterstützt.');
+    if(/^otpauth:\/\/hotp/i.test(o))throw new Error(T('Nur zeitbasierte Codes (TOTP) werden unterstützt.'));
     return {secret:base32dec(p.get('secret')||''),digits:+(p.get('digits')||6),period:+(p.get('period')||30),algo:(p.get('algorithm')||'SHA1').toUpperCase().replace('-',''),steam:(p.get('encoder')||'').toLowerCase()==='steam'};}
   if(/key=/.test(o)){const p=new URLSearchParams(o);return {secret:base32dec(p.get('key')||''),digits:+(p.get('size')||6),period:+(p.get('step')||30),algo:(p.get('otpHashMode')||'SHA1').toUpperCase().replace('-',''),steam:false};}
   return {secret:base32dec(o),digits:6,period:30,algo:'SHA1',steam:false};}

@@ -52,7 +52,7 @@ const STD=['Title','UserName','Password','URL','Notes'];
 const meta=()=>X.kid(S.db.xml,'Meta');
 const rootGroup=()=>X.kid(X.kid(S.db.xml,'Root'),'Group');
 const uuidOf=el=>X.text(X.kid(el,'UUID'));
-const gName=g=>X.text(X.kid(g,'Name'))||'Ohne Namen';
+const gName=g=>X.text(X.kid(g,'Name'))||T('Ohne Namen');
 function str(e,k){for(const s of X.kids(e,'String'))if(X.text(X.kid(s,'Key'))===k)return X.text(X.kid(s,'Value'));return '';}
 function strEl(e,k){return X.kids(e,'String').find(s=>X.text(X.kid(s,'Key'))===k);}
 function setStr(e,k,v,prot){
@@ -67,14 +67,14 @@ function delStr(e,k){const s=strEl(e,k);if(s)X.remove(s);}
 function isProt(e,k){const s=strEl(e,k);return !!s&&X.kid(s,'Value').attrs.Protected==='True';}
 function protDefault(k){const map={Title:'ProtectTitle',UserName:'ProtectUserName',Password:'ProtectPassword',URL:'ProtectURL',Notes:'ProtectNotes'};
   if(!map[k])return false;const mp=X.kid(meta(),'MemoryProtection');const v=X.text(X.kid(mp,map[k]));return k==='Password'?v!=='False':v==='True';}
-function setTime(el,k,d){const T=X.ensure(el,'Times');X.setText(X.ensure(T,k),timeStr(S.db,d));}
+function setTime(el,k,d){const Tm=X.ensure(el,'Times');X.setText(X.ensure(Tm,k),timeStr(S.db,d));}
 function getTime(el,k){return parseTime(S.db,X.text(X.kid(X.kid(el,'Times'),k)));}
 function touch(el){const n=new Date();setTime(el,'LastModificationTime',n);setTime(el,'LastAccessTime',n);}
 function binUuid(){return X.text(X.kid(meta(),'RecycleBinUUID'));}
 function binEnabled(){return X.text(X.kid(meta(),'RecycleBinEnabled'))!=='False';}
 function findGroup(uuid,g=rootGroup()){if(!uuid)return null;if(uuidOf(g)===uuid)return g;for(const c of X.kids(g,'Group')){const r=findGroup(uuid,c);if(r)return r;}return null;}
 function recycleBin(create){let b=findGroup(binUuid());if(b||!create)return b;
-  b=makeGroup('Papierkorb',43);X.append(b,X.el('EnableAutoType','false'));X.append(b,X.el('EnableSearching','false'));X.append(rootGroup(),b);
+  b=makeGroup(T('Papierkorb'),43);X.append(b,X.el('EnableAutoType','false'));X.append(b,X.el('EnableSearching','false'));X.append(rootGroup(),b);
   X.setText(X.ensure(meta(),'RecycleBinUUID'),uuidOf(b));X.setText(X.ensure(meta(),'RecycleBinChanged'),timeStr(S.db));return b;}
 function inBin(el){const b=recycleBin(false);if(!b)return false;for(let p=el;p;p=p.parent)if(p===b)return true;return false;}
 function allEntries(g,out=[],skipBin=true){const b=skipBin?recycleBin(false):null;
@@ -95,7 +95,7 @@ function recordDeleted(el){const d=X.ensure(X.kid(S.db.xml,'Root'),'DeletedObjec
 function deleteEl(el){
   if(binEnabled()&&!inBin(el)&&el!==recycleBin(false)){moveTo(el,recycleBin(true));return 'bin';}
   recordDeleted(el);X.remove(el);return 'gone';}
-function expired(e){const T=X.kid(e,'Times');if(X.text(X.kid(T,'Expires'))!=='True')return false;const d=getTime(e,'ExpiryTime');return d&&d<new Date();}
+function expired(e){const Tm=X.kid(e,'Times');if(X.text(X.kid(Tm,'Expires'))!=='True')return false;const d=getTime(e,'ExpiryTime');return d&&d<new Date();}
 function tagsOf(e){return X.text(X.kid(e,'Tags')).split(/[;,]/).map(s=>s.trim()).filter(Boolean);}
 const curGroupEl=()=>(typeof S.group!=='object'||!S.group)?rootGroup():S.group;
 function customIconSrc(uuid){if(!uuid||/^A+=*$/.test(uuid))return null;const ci=X.kids(X.kid(meta(),'CustomIcons'),'Icon').find(i=>X.text(X.kid(i,'UUID'))===uuid);
@@ -114,9 +114,9 @@ function groupIcon(g){if(g===recycleBin(false))return ICON.trash;const src=custo
   const id=parseInt(X.text(X.kid(g,'IconID'))||'48',10);return id===48||id===49||id===0?ICON.folder:kpSvg(id);}
 function tiles(pw,show){
   if(!show)return `<div class="tiles">${'<span class="tile dot"><b>•</b><small>&nbsp;</small></span>'.repeat(8)}</div>`;
-  if(!pw)return '<span class="muted">Kein Passwort</span>';
+  if(!pw)return `<span class="muted">${T('Kein Passwort')}</span>`;
   return `<div class="tiles">${[...pw].map((c,i)=>{const cls=/[0-9]/.test(c)?'d':/[\p{L}]/u.test(c)?'':c===' '?'sp':'s';return `<span class="tile ${cls}"><b>${esc(c)}</b><small>${i+1}</small></span>`;}).join('')}</div>`;}
-function fmtDate(d){return d?d.toLocaleString('de-DE',{dateStyle:'medium',timeStyle:'short'}):'–';}
+function fmtDate(d){return d?d.toLocaleString(LOC,{dateStyle:'medium',timeStyle:'short'}):'–';}
 function safeUrl(u){if(!u)return null;const x=/^[a-z][a-z0-9+.-]*:/i.test(u)?u:'https://'+u;return /^(https?|ftp):/i.test(x)?x:null;}
 
 // ===== Sicherheitsbericht =====
@@ -139,78 +139,78 @@ function renderGroups(){
   const root=rootGroup();const bin=recycleBin(false);
   const row=(g,depth)=>{const sel=S.group===g;const n=X.kids(g,'Entry').length;
     const u=esc(uuidOf(g));const canDrag=g!==rootGroup()&&g!==bin;
-    return `<div class="grow" data-uuid="${u}"${canDrag?' draggable="true"':''}><button class="gitem${sel?' sel':''}" data-act="group" data-uuid="${u}" style="padding-left:${8+depth*16}px">${groupIcon(g)}<span class="nm">${esc(gName(g))}</span><span class="cnt">${n||''}</span></button><button class="gmore" data-act="gmenu" data-uuid="${u}" title="Gruppe „${esc(gName(g))}“ verwalten" aria-label="Gruppe verwalten">${ICON.dots}</button></div>`+
+    return `<div class="grow" data-uuid="${u}"${canDrag?' draggable="true"':''}><button class="gitem${sel?' sel':''}" data-act="group" data-uuid="${u}" style="padding-left:${8+depth*16}px">${groupIcon(g)}<span class="nm">${esc(gName(g))}</span><span class="cnt">${n||''}</span></button><button class="gmore" data-act="gmenu" data-uuid="${u}" title="${T('Gruppe „{g}“ verwalten',{g:esc(gName(g))})}" aria-label="${T('Gruppe verwalten')}">${ICON.dots}</button></div>`+
       X.kids(g,'Group').filter(c=>c!==bin).map(c=>row(c,depth+1)).join('');};
-  $('groups').innerHTML=`<div class="gsec">Bibliothek</div><button class="gitem${S.group==='home'?' sel':''}" data-act="pseudo" data-g="home">${kpSvg(0,'home')}<span class="nm">Übersicht</span></button>
-    <button class="gitem${S.group==='all'?' sel':''}" data-act="group" data-uuid="">${ICON.all}<span class="nm">Alle Einträge</span><span class="cnt">${allEntries(root).length}</span></button>
-    ${(()=>{const nf=allEntries(root).filter(isFav).length,nr=recentList().length;return (nf?`<button class="gitem${S.group==='fav'?' sel':''}" data-act="pseudo" data-g="fav"><span class="gstar">★</span><span class="nm">Favoriten</span><span class="cnt">${nf}</span></button>`:'')+(nr?`<button class="gitem${S.group==='recent'?' sel':''}" data-act="pseudo" data-g="recent">${kpSvg(0,'clock')}<span class="nm">Zuletzt verwendet</span></button>`:'');})()}
-    <button class="gitem${S.group==='report'?' sel':''}" data-act="report">${ICON.shield}<span class="nm">Sicherheit</span>${(()=>{const n=analyze().count;return n?`<span class="cnt warn">${n}</span>`:'<span class="cnt">✓</span>';})()}</button>
-    <div class="ghead"><span>Gruppen</span><button class="icon-btn" data-act="newGroup" title="Neue Gruppe">${ICON.plus}</button></div>
-    ${row(root,0)}<button class="gitem gadd" data-act="newGroup">${ICON.plus}<span class="nm">Neue Gruppe</span></button>${bin?row(bin,0):''}`;}
+  $('groups').innerHTML=`<div class="gsec">${T('Bibliothek')}</div><button class="gitem${S.group==='home'?' sel':''}" data-act="pseudo" data-g="home">${kpSvg(0,'home')}<span class="nm">${T('Übersicht')}</span></button>
+    <button class="gitem${S.group==='all'?' sel':''}" data-act="group" data-uuid="">${ICON.all}<span class="nm">${T('Alle Einträge')}</span><span class="cnt">${allEntries(root).length}</span></button>
+    ${(()=>{const nf=allEntries(root).filter(isFav).length,nr=recentList().length;return (nf?`<button class="gitem${S.group==='fav'?' sel':''}" data-act="pseudo" data-g="fav"><span class="gstar">★</span><span class="nm">${T('Favoriten')}</span><span class="cnt">${nf}</span></button>`:'')+(nr?`<button class="gitem${S.group==='recent'?' sel':''}" data-act="pseudo" data-g="recent">${kpSvg(0,'clock')}<span class="nm">${T('Zuletzt verwendet')}</span></button>`:'');})()}
+    <button class="gitem${S.group==='report'?' sel':''}" data-act="report">${ICON.shield}<span class="nm">${T('Sicherheit')}</span>${(()=>{const n=analyze().count;return n?`<span class="cnt warn">${n}</span>`:'<span class="cnt">✓</span>';})()}</button>
+    <div class="ghead"><span>${T('Gruppen')}</span><button class="icon-btn" data-act="newGroup" title="${T('Neue Gruppe')}">${ICON.plus}</button></div>
+    ${row(root,0)}<button class="gitem gadd" data-act="newGroup">${ICON.plus}<span class="nm">${T('Neue Gruppe')}</span></button>${bin?row(bin,0):''}`;}
 function currentEntries(){
   const q=S.query.trim().toLowerCase();
   let list;
   if(!q&&S.group==='recent')return recentList();
-  if(!q&&S.group==='fav')return allEntries(rootGroup()).filter(isFav).sort((a,b)=>str(a,'Title').localeCompare(str(b,'Title'),'de',{sensitivity:'base'}));
+  if(!q&&S.group==='fav')return allEntries(rootGroup()).filter(isFav).sort((a,b)=>str(a,'Title').localeCompare(str(b,'Title'),LOC,{sensitivity:'base'}));
   if(q){list=allEntries(rootGroup()).filter(e=>{
       const hay=[...X.kids(e,'String').filter(s=>{const k=X.text(X.kid(s,'Key'));return k!=='Password'&&k!=='otp'&&!k.startsWith('TimeOtp')&&k!=='KPEX_PASSKEY_PRIVATE_KEY_PEM';}).map(s=>X.text(X.kid(s,'Value'))),X.text(X.kid(e,'Tags'))].join('\n').toLowerCase();
       return q.split(/\s+/).every(w=>hay.includes(w));});}
   else if(typeof S.group!=='object')list=allEntries(rootGroup());
   else list=X.kids(S.group,'Entry');
-  return list.sort((a,b)=>str(a,'Title').localeCompare(str(b,'Title'),'de',{sensitivity:'base'}));}
-function eRow(e,sub){const t=str(e,'Title')||'Ohne Titel';
+  return list.sort((a,b)=>str(a,'Title').localeCompare(str(b,'Title'),LOC,{sensitivity:'base'}));}
+function eRow(e,sub){const t=str(e,'Title')||T('Ohne Titel');
   const sel=bulkActive()||S.selMode?S.sel.has(e):S.entry===e;
-  return `<button class="eitem${sel?' sel':''}" data-act="entry" draggable="true" data-uuid="${esc(uuidOf(e))}">${S.selMode?`<span class="ck${S.sel.has(e)?' on':''}">${ICON.check}</span>`:''}${entryBadge(e)}<span class="tx"><div class="t">${esc(t)}${isFav(e)?'<span class="favstar" title="Favorit">★</span>':''}${expired(e)?'<span class="tag-exp">abgelaufen</span>':expiresSoon(e)?'<span class="tag-soon">läuft bald ab</span>':''}${passkeyOf(e)?'<span class="tag-pk">Passkey</span>':''}</div><div class="s">${esc(sub)||'&nbsp;'}</div></span></button>`;}
+  return `<button class="eitem${sel?' sel':''}" data-act="entry" draggable="true" data-uuid="${esc(uuidOf(e))}">${S.selMode?`<span class="ck${S.sel.has(e)?' on':''}">${ICON.check}</span>`:''}${entryBadge(e)}<span class="tx"><div class="t">${esc(t)}${isFav(e)?`<span class="favstar" title="${T('Favorit')}">★</span>`:''}${expired(e)?`<span class="tag-exp">${T('abgelaufen')}</span>`:expiresSoon(e)?`<span class="tag-soon">${T('läuft bald ab')}</span>`:''}${passkeyOf(e)?'<span class="tag-pk">Passkey</span>':''}</div><div class="s">${esc(sub)||'&nbsp;'}</div></span></button>`;}
 function renderReport(){
-  const r=analyze();let h=`<div class="lhead"><h2>Sicherheit</h2></div>`;
-  h+=`<div class="rsum"><b>${r.count?`${r.count} von ${r.total} Einträgen brauchen Aufmerksamkeit`:'Alles in Ordnung'}</b><span>${r.count?'Bearbeite die Einträge unten und vergib neue Passwörter.':'Keine schwachen, mehrfach verwendeten, alten oder ablaufenden Passwörter und keine Duplikate gefunden.'}</span></div>`;
-  const sec=(title,list,sub,hint)=>{if(!list.length)return '';return `<div class="lsec"><span>${title}</span><span>${list.length}</span></div><div class="lhint">${hint}</div>`+list.sort((a,b)=>str(a,'Title').localeCompare(str(b,'Title'),'de')).map(e=>eRow(e,sub(e))).join('');};
-  h+=sec('Mehrfach verwendet',r.reused,e=>'Gleich wie: '+r.byPw.get(str(e,'Password')).filter(x=>x!==e).map(x=>str(x,'Title')||'Ohne Titel').join(', '),'Wird ein Dienst gehackt, sind alle Konten mit diesem Passwort gefährdet.');
-  h+=sec('Schwach',r.weak,e=>`Etwa ${entropy(str(e,'Password'))} Bit – Ziel: mindestens 64`,'Kurz oder aus wenigen Zeichenarten – mit dem Generator ersetzen.');
-  if(r.dups.length)h+=`<div class="lsec"><span>Doppelte Einträge</span><span>${r.dups.length}</span></div><div class="lhint">Gleiche Website und gleicher Benutzername – meist nach einem Import. <button class="linkbtn" data-act="dups">Prüfen und zusammenführen</button></div>`+r.dups.map(g=>eRow(g[0],`${g.length}× vorhanden: `+g.map(groupPath).join(', '))).join('');
-  h+=sec('Läuft bald ab',r.soon,e=>'Läuft ab am '+getTime(e,'ExpiryTime').toLocaleDateString('de-DE'),'Innerhalb der nächsten 30 Tage – rechtzeitig ein neues Passwort vergeben.');
-  h+=sec('Abgelaufen',r.exp,e=>'Abgelaufen am '+fmtDate(getTime(e,'ExpiryTime')),'Das hinterlegte Ablaufdatum ist überschritten.');
-  h+=sec('Älter als ein Jahr',r.old,e=>'Unverändert seit '+(pwSince(e)||new Date()).toLocaleDateString('de-DE'),'Bei wichtigen Konten lohnt sich ein regelmäßiger Wechsel.');
+  const r=analyze();let h=`<div class="lhead"><h2>${T('Sicherheit')}</h2></div>`;
+  h+=`<div class="rsum"><b>${r.count?T('{n} von {total} Einträgen brauchen Aufmerksamkeit',{n:r.count,total:r.total}):T('Alles in Ordnung')}</b><span>${r.count?T('Bearbeite die Einträge unten und vergib neue Passwörter.'):T('Keine schwachen, mehrfach verwendeten, alten oder ablaufenden Passwörter und keine Duplikate gefunden.')}</span></div>`;
+  const sec=(title,list,sub,hint)=>{if(!list.length)return '';return `<div class="lsec"><span>${title}</span><span>${list.length}</span></div><div class="lhint">${hint}</div>`+list.sort((a,b)=>str(a,'Title').localeCompare(str(b,'Title'),LOC)).map(e=>eRow(e,sub(e))).join('');};
+  h+=sec(T('Mehrfach verwendet'),r.reused,e=>T('Gleich wie: {x}',{x:r.byPw.get(str(e,'Password')).filter(x=>x!==e).map(x=>str(x,'Title')||T('Ohne Titel')).join(', ')}),T('Wird ein Dienst gehackt, sind alle Konten mit diesem Passwort gefährdet.'));
+  h+=sec(T('Schwach'),r.weak,e=>T('Etwa {n} Bit – Ziel: mindestens 64',{n:entropy(str(e,'Password'))}),T('Kurz oder aus wenigen Zeichenarten – mit dem Generator ersetzen.'));
+  if(r.dups.length)h+=`<div class="lsec"><span>${T('Doppelte Einträge')}</span><span>${r.dups.length}</span></div><div class="lhint">${T('Gleiche Website und gleicher Benutzername – meist nach einem Import.')} <button class="linkbtn" data-act="dups">${T('Prüfen und zusammenführen')}</button></div>`+r.dups.map(g=>eRow(g[0],T('{n}× vorhanden: {x}',{n:g.length,x:g.map(groupPath).join(', ')}))).join('');
+  h+=sec(T('Läuft bald ab'),r.soon,e=>T('Läuft ab am {d}',{d:getTime(e,'ExpiryTime').toLocaleDateString(LOC)}),T('Innerhalb der nächsten 30 Tage – rechtzeitig ein neues Passwort vergeben.'));
+  h+=sec(T('Abgelaufen'),r.exp,e=>T('Abgelaufen am {d}',{d:fmtDate(getTime(e,'ExpiryTime'))}),T('Das hinterlegte Ablaufdatum ist überschritten.'));
+  h+=sec(T('Älter als ein Jahr'),r.old,e=>T('Unverändert seit {d}',{d:(pwSince(e)||new Date()).toLocaleDateString(LOC)}),T('Bei wichtigen Konten lohnt sich ein regelmäßiger Wechsel.'));
   $('list').innerHTML=h;}
 function renderList(){
   if(S.group==='report'&&!S.query.trim())return renderReport();
   const list=currentEntries();const q=S.query.trim();
-  const title=q?`Suche: ${q}`:S.group==='all'||S.group==='home'?'Alle Einträge':S.group==='fav'?'Favoriten':S.group==='recent'?'Zuletzt verwendet':gName(S.group);
+  const title=q?T('Suche: {q}',{q}):S.group==='all'||S.group==='home'?T('Alle Einträge'):S.group==='fav'?T('Favoriten'):S.group==='recent'?T('Zuletzt verwendet'):gName(S.group);
   const isGroup=!q&&typeof S.group==='object';
-  let h=`<div class="lhead"><h2>${esc(title)}</h2><button class="btn ghost small" data-act="selMode">${S.selMode?'Fertig':'Auswählen'}</button><button class="icon-btn" data-act="density" title="${prefs.compact?'Normale Liste':'Kompakte Liste'}">${ICON.list}</button>${isGroup?`<button class="icon-btn" data-act="gmenu" data-uuid="${esc(uuidOf(S.group))}" title="Gruppe verwalten">${ICON.dots}</button>`:''}</div>`;
-  if(!list.length&&!q&&isGroup&&X.kids(S.group,'Group').length)h+=`<div class="empty"><b>Keine Einträge direkt in dieser Gruppe</b>Die Einträge liegen in den Untergruppen links.</div>`;
-  else if(!list.length)h+=q?`<div class="empty"><b>Keine Treffer</b>Gesucht wird in Titel, Benutzername, URL, Notizen, Tags und eigenen Feldern.</div>`
-    :`<div class="empty"><b>Noch keine Einträge</b>${isGroup?`In „${esc(gName(S.group))}“ liegt noch nichts.`:'Die Datenbank ist noch leer.'}<div style="margin-top:14px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button class="btn primary" data-act="entryHere">${ICON.plus}Neuer Eintrag</button>${isGroup?`<button class="btn" data-act="gmenu" data-uuid="${esc(uuidOf(S.group))}">${ICON.dots}Gruppe verwalten</button>`:''}</div></div>`;
+  let h=`<div class="lhead"><h2>${esc(title)}</h2><button class="btn ghost small" data-act="selMode">${S.selMode?T('Fertig'):T('Auswählen')}</button><button class="icon-btn" data-act="density" title="${prefs.compact?T('Normale Liste'):T('Kompakte Liste')}">${ICON.list}</button>${isGroup?`<button class="icon-btn" data-act="gmenu" data-uuid="${esc(uuidOf(S.group))}" title="${T('Gruppe verwalten')}">${ICON.dots}</button>`:''}</div>`;
+  if(!list.length&&!q&&isGroup&&X.kids(S.group,'Group').length)h+=`<div class="empty"><b>${T('Keine Einträge direkt in dieser Gruppe')}</b>${T('Die Einträge liegen in den Untergruppen links.')}</div>`;
+  else if(!list.length)h+=q?`<div class="empty"><b>${T('Keine Treffer')}</b>${T('Gesucht wird in Titel, Benutzername, URL, Notizen, Tags und eigenen Feldern.')}</div>`
+    :`<div class="empty"><b>${T('Noch keine Einträge')}</b>${isGroup?T('In „{g}“ liegt noch nichts.',{g:esc(gName(S.group))}):T('Die Datenbank ist noch leer.')}<div style="margin-top:14px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button class="btn primary" data-act="entryHere">${ICON.plus}${T('Neuer Eintrag')}</button>${isGroup?`<button class="btn" data-act="gmenu" data-uuid="${esc(uuidOf(S.group))}">${ICON.dots}${T('Gruppe verwalten')}</button>`:''}</div></div>`;
   for(const e of list){const sub=q||typeof S.group!=='object'?[str(e,'UserName'),groupPath(e)].filter(Boolean).join(' – '):(str(e,'UserName')||str(e,'URL'));h+=eRow(e,sub);}
   $('list').innerHTML=h;}
 let reveal=false;
 function renderDetail(){
   if(bulkActive()){startOtp(null);return renderBulk();}
   const e=S.entry;const d=$('detail');
-  if(!e||!e.parent){S.entry=null;startOtp(null);d.innerHTML=`<div class="empty" style="padding-top:18vh"><b>Kein Eintrag ausgewählt</b>Wähle links einen Eintrag aus.<br><span class="hide-narrow"><kbd>⌘</kbd><kbd>K</kbd> sucht Einträge und Befehle, <kbd>?</kbd> zeigt alle Tastenkürzel.</span></div>`;return;}
-  const t=str(e,'Title')||'Ohne Titel',u=str(e,'UserName'),pw=str(e,'Password'),url=str(e,'URL'),notes=str(e,'Notes');
+  if(!e||!e.parent){S.entry=null;startOtp(null);d.innerHTML=`<div class="empty" style="padding-top:18vh"><b>${T('Kein Eintrag ausgewählt')}</b>${T('Wähle links einen Eintrag aus.')}<br><span class="hide-narrow">${T('<kbd>⌘</kbd><kbd>K</kbd> sucht Einträge und Befehle, <kbd>?</kbd> zeigt alle Tastenkürzel.')}</span></div>`;return;}
+  const t=str(e,'Title')||T('Ohne Titel'),u=str(e,'UserName'),pw=str(e,'Password'),url=str(e,'URL'),notes=str(e,'Notes');
   const cp=(k,label)=>{const c=S.copied&&S.copied.e===e&&S.copied.k===k&&Date.now()-S.copied.t<30000;
-    return `<button class="icon-btn cbtn${c?' copied':''}" data-act="copy" data-key="${esc(k)}" title="${esc(label)} kopieren">${c?ICON.check+`<svg class="cring" viewBox="0 0 30 30"><circle cx="15" cy="15" r="13" style="animation-delay:-${((Date.now()-S.copied.t)/1000).toFixed(2)}s"/></svg>`:ICON.copy}</button>`;};
-  let h=`<div class="dwrap"><div class="dtop"><button class="icon-btn back" data-act="backList" title="Zurück">${ICON.back}</button>${entryBadge(e,true)}<div style="min-width:0"><h1>${esc(t)}</h1><div class="path">${esc(groupPath(e))}</div></div>
-    <div class="acts"><button class="icon-btn star${isFav(e)?' on':''}" data-act="fav" title="${isFav(e)?'Aus Favoriten entfernen':'Als Favorit markieren'} (⌘D)">${isFav(e)?'★':'☆'}</button><button class="icon-btn hide-narrow" data-act="print" title="Drucken (⌘P)">${kpSvg(0,'printer')}</button><button class="btn" data-act="edit">${ICON.edit}<span class="hide-narrow">Bearbeiten</span></button><button class="icon-btn" data-act="delEntry" title="${inBin(e)?'Endgültig löschen':'In den Papierkorb'}">${ICON.trash}</button></div></div>`;
-  if(u)h+=`<div class="field"><div class="k">Benutzername</div><div class="row"><div class="v">${esc(u)}</div>${cp('UserName','Benutzername')}</div></div>`;
-  if(pw||(!passkeyOf(e)&&!X.kids(e,'String').some(s=>!STD.includes(X.text(X.kid(s,'Key')))&&X.text(X.kid(s,'Value')))&&!str(e,'Notes')))h+=`<div class="field"><div class="k">Passwort</div><div class="row"><div class="v" style="padding-top:2px">${tiles(pw,reveal)}</div>
-    <button class="icon-btn" data-act="reveal" title="${reveal?'Verbergen':'Anzeigen'}">${reveal?ICON.eyeOff:ICON.eye}</button>${pw?cp('Password','Passwort'):''}</div></div>`;
+    return `<button class="icon-btn cbtn${c?' copied':''}" data-act="copy" data-key="${esc(k)}" title="${esc(T('{x} kopieren',{x:label}))}">${c?ICON.check+`<svg class="cring" viewBox="0 0 30 30"><circle cx="15" cy="15" r="13" style="animation-delay:-${((Date.now()-S.copied.t)/1000).toFixed(2)}s"/></svg>`:ICON.copy}</button>`;};
+  let h=`<div class="dwrap"><div class="dtop"><button class="icon-btn back" data-act="backList" title="${T('Zurück')}">${ICON.back}</button>${entryBadge(e,true)}<div style="min-width:0"><h1>${esc(t)}</h1><div class="path">${esc(groupPath(e))}</div></div>
+    <div class="acts"><button class="icon-btn star${isFav(e)?' on':''}" data-act="fav" title="${isFav(e)?T('Aus Favoriten entfernen'):T('Als Favorit markieren')} (⌘D)">${isFav(e)?'★':'☆'}</button><button class="icon-btn hide-narrow" data-act="print" title="${T('Drucken')} (⌘P)">${kpSvg(0,'printer')}</button><button class="btn" data-act="edit">${ICON.edit}<span class="hide-narrow">${T('Bearbeiten')}</span></button><button class="icon-btn" data-act="delEntry" title="${inBin(e)?T('Endgültig löschen'):T('In den Papierkorb')}">${ICON.trash}</button></div></div>`;
+  if(u)h+=`<div class="field"><div class="k">${T('Benutzername')}</div><div class="row"><div class="v">${esc(u)}</div>${cp('UserName',T('Benutzername'))}</div></div>`;
+  if(pw||(!passkeyOf(e)&&!X.kids(e,'String').some(s=>!STD.includes(X.text(X.kid(s,'Key')))&&X.text(X.kid(s,'Value')))&&!str(e,'Notes')))h+=`<div class="field"><div class="k">${T('Passwort')}</div><div class="row"><div class="v" style="padding-top:2px">${tiles(pw,reveal)}</div>
+    <button class="icon-btn" data-act="reveal" title="${reveal?T('Verbergen'):T('Anzeigen')}">${reveal?ICON.eyeOff:ICON.eye}</button>${pw?cp('Password',T('Passwort')):''}</div></div>`;
   const otp=otpConfig(e);
-  if(otp)h+=otp.error?`<div class="field"><div class="k">Einmalcode (2FA)</div><div class="v" style="color:var(--danger)">Der 2FA-Schlüssel ist ungültig: ${esc(otp.error)}</div></div>`
-    :`<div class="field"><div class="k">Einmalcode (2FA)</div><div class="row" style="align-items:center"><div class="v" style="padding:0"><span class="otp mono" id="otpCode">··· ···</span></div><svg class="oring" id="otpRing" viewBox="0 0 30 30" aria-label="Restzeit"><circle class="bg" cx="15" cy="15" r="12"/><circle class="fg" cx="15" cy="15" r="12"/><text x="15" y="19" text-anchor="middle" id="otpLeft"></text></svg>${cp('#otp','Einmalcode')}</div></div>`;
-  if(url){const su=safeUrl(url);h+=`<div class="field"><div class="k">URL</div><div class="row"><div class="v">${su?`<a href="${esc(su)}" target="_blank" rel="noopener noreferrer">${esc(url)}</a>`:esc(url)}</div>${su?`<a class="icon-btn" href="${esc(su)}" target="_blank" rel="noopener noreferrer" title="Öffnen">${ICON.ext}</a>`:''}${cp('URL','URL')}</div></div>`;}
-  if(notes)h+=`<div class="field"><div class="k">Notizen</div><div class="v"><pre>${esc(notes)}</pre></div></div>`;
+  if(otp)h+=otp.error?`<div class="field"><div class="k">${T('Einmalcode (2FA)')}</div><div class="v" style="color:var(--danger)">${T('Der 2FA-Schlüssel ist ungültig: {e}',{e:esc(otp.error)})}</div></div>`
+    :`<div class="field"><div class="k">${T('Einmalcode (2FA)')}</div><div class="row" style="align-items:center"><div class="v" style="padding:0"><span class="otp mono" id="otpCode">··· ···</span></div><svg class="oring" id="otpRing" viewBox="0 0 30 30" aria-label="${T('Restzeit')}"><circle class="bg" cx="15" cy="15" r="12"/><circle class="fg" cx="15" cy="15" r="12"/><text x="15" y="19" text-anchor="middle" id="otpLeft"></text></svg>${cp('#otp',T('Einmalcode'))}</div></div>`;
+  if(url){const su=safeUrl(url);h+=`<div class="field"><div class="k">URL</div><div class="row"><div class="v">${su?`<a href="${esc(su)}" target="_blank" rel="noopener noreferrer">${esc(url)}</a>`:esc(url)}</div>${su?`<a class="icon-btn" href="${esc(su)}" target="_blank" rel="noopener noreferrer" title="${T('Öffnen')}">${ICON.ext}</a>`:''}${cp('URL','URL')}</div></div>`;}
+  if(notes)h+=`<div class="field"><div class="k">${T('Notizen')}</div><div class="v"><pre>${esc(notes)}</pre></div></div>`;
   const pk=passkeyOf(e);
-  if(pk)h+=`<div class="field"><div class="k">Passkey</div><div class="pk">${kpSvg(0,'userkey')}<div><b>${esc(pk.rp||'Unbekannter Dienst')}</b><span>${pk.user?'Benutzer: '+esc(pk.user):'Ohne Benutzername'}</span></div></div><p class="note" style="margin-top:8px">Anmelden mit diesem Passkey geht über die KeePassXC-Browsererweiterung oder Strongbox. Tresor bewahrt ihn sicher auf und überträgt ihn beim Speichern unverändert.</p></div>`;
+  if(pk)h+=`<div class="field"><div class="k">Passkey</div><div class="pk">${kpSvg(0,'userkey')}<div><b>${esc(pk.rp||T('Unbekannter Dienst'))}</b><span>${pk.user?T('Benutzer: {u}',{u:esc(pk.user)}):T('Ohne Benutzername')}</span></div></div><p class="note" style="margin-top:8px">${T('Anmelden mit diesem Passkey geht über die KeePassXC-Browsererweiterung oder Strongbox. Tresor bewahrt ihn sicher auf und überträgt ihn beim Speichern unverändert.')}</p></div>`;
   for(const s of X.kids(e,'String')){const k=X.text(X.kid(s,'Key'));if(STD.includes(k)||isPkKey(k)||(otp&&!otp.error&&OTP_KEYS.includes(k)))continue;const prot=X.kid(s,'Value').attrs.Protected==='True';const v=X.text(X.kid(s,'Value'));if(!v)continue;
     h+=`<div class="field"><div class="k">${esc(k)}</div><div class="row"><div class="v">${prot&&!reveal?'<span class="muted">••••••••</span>':`<pre class="${prot?'mono':''}">${esc(v)}</pre>`}</div>${cp(k,k)}</div></div>`;}
   const bins=X.kids(e,'Binary');
-  h+=`<div class="field"><div class="k">Anhänge</div>${bins.map((b,i)=>`<div class="row"><div class="v">${ICON.clip} ${esc(X.text(X.kid(b,'Key')))} <span class="muted" style="font-size:13px">${fmtSize(attData(b))}</span></div><button class="icon-btn" data-act="att" data-i="${i}" title="Herunterladen">${ICON.dl}</button><button class="icon-btn" data-act="attDel" data-i="${i}" title="Anhang entfernen">${ICON.trash}</button></div>`).join('')}
-    <button class="btn ghost" data-act="attAdd" style="margin-top:4px">${ICON.plus}Anhang hinzufügen</button></div>`;
+  h+=`<div class="field"><div class="k">${T('Anhänge')}</div>${bins.map((b,i)=>`<div class="row"><div class="v">${ICON.clip} ${esc(X.text(X.kid(b,'Key')))} <span class="muted" style="font-size:13px">${fmtSize(attData(b))}</span></div><button class="icon-btn" data-act="att" data-i="${i}" title="${T('Herunterladen')}">${ICON.dl}</button><button class="icon-btn" data-act="attDel" data-i="${i}" title="${T('Anhang entfernen')}">${ICON.trash}</button></div>`).join('')}
+    <button class="btn ghost" data-act="attAdd" style="margin-top:4px">${ICON.plus}${T('Anhang hinzufügen')}</button></div>`;
   const tg=tagsOf(e).filter(t=>!/^(favorit|favorite|favourite|sensibel|sensitive)$/i.test(t));if(tg.length)h+=`<div class="field"><div class="k">Tags</div><div class="chips">${tg.map(x=>`<span class="chip">${esc(x)}</span>`).join('')}</div></div>`;
-  const T=X.kid(e,'Times');const exp=X.text(X.kid(T,'Expires'))==='True';
-  h+=`<div class="field"><div class="meta-grid"><span>Erstellt</span><span>${fmtDate(getTime(e,'CreationTime'))}</span><span>Geändert</span><span>${fmtDate(getTime(e,'LastModificationTime'))}</span>${exp?`<span>Läuft ab</span><span style="${expired(e)?'color:var(--danger)':''}">${fmtDate(getTime(e,'ExpiryTime'))}</span>`:''}</div></div>`;
+  const Tm=X.kid(e,'Times');const exp=X.text(X.kid(Tm,'Expires'))==='True';
+  h+=`<div class="field"><div class="meta-grid"><span>${T('Erstellt')}</span><span>${fmtDate(getTime(e,'CreationTime'))}</span><span>${T('Geändert')}</span><span>${fmtDate(getTime(e,'LastModificationTime'))}</span>${exp?`<span>${T('Läuft ab')}</span><span style="${expired(e)?'color:var(--danger)':''}">${fmtDate(getTime(e,'ExpiryTime'))}</span>`:''}</div></div>`;
   h+=historyHtml(e);
   h+='</div>';d.innerHTML=h;startOtp(otp&&!otp.error?otp:null);}
 // Anhänge
@@ -219,16 +219,16 @@ function attData(b){try{const v=X.kid(b,'Value');const ref=v.attrs.Ref;if(ref===
   const mb=X.kids(X.kid(meta(),'Binaries'),'Binary').find(x=>x.attrs.ID===ref);return mb?(mb.attrs.Compressed==='True'?-1:unb64(X.text(mb)).length):0;}catch(e){return 0;}}
 function fmtSize(n){if(n<0)return '';return n<1024?n+' B':n<1048576?(n/1024).toFixed(0)+' KB':(n/1048576).toFixed(1)+' MB';}
 async function addAttachment(e,file){
-  if(file.size>20*1048576&&!confirm(`„${file.name}“ ist ${fmtSize(file.size)} groß. Große Anhänge machen die Datenbank langsam. Trotzdem hinzufügen?`))return;
+  if(file.size>20*1048576&&!confirm(T('„{f}“ ist {s} groß. Große Anhänge machen die Datenbank langsam. Trotzdem hinzufügen?',{f:file.name,s:fmtSize(file.size)})))return;
   const data=new Uint8Array(await file.arrayBuffer());let name=file.name;const names=X.kids(e,'Binary').map(b=>X.text(X.kid(b,'Key')));
   for(let i=2;names.includes(name);i++)name=file.name.replace(/(\.[^.]*)?$/,m=>` (${i})`+m);
-  checkpoint('Anhang hinzufügen');pushHistory(e);let ref;
+  checkpoint(T('Anhang hinzufügen'));pushHistory(e);let ref;
   if(S.db.major===4){ref=String(S.db.binaries.length);S.db.binaries.push({flags:0,data});}
   else{const pool=X.ensure(meta(),'Binaries');const ids=X.kids(pool,'Binary').map(b=>+b.attrs.ID);ref=String(ids.length?Math.max(...ids)+1:0);
     X.append(pool,X.el('Binary',b64(await gzip(data)),{ID:ref,Compressed:'True'}));}
   const be=X.el('Binary');X.append(be,X.el('Key',name));X.append(be,X.el('Value',null,{Ref:ref}));
   const nx=e.children.find(c=>typeof c!=='string'&&(c.name==='AutoType'||c.name==='History'));if(nx)X.insertAt(e,be,e.children.indexOf(nx));else X.append(e,be);
-  touch(e);markDirty();renderDetail();undoToast('Anhang hinzugefügt');}
+  touch(e);markDirty();renderDetail();undoToast(T('Anhang hinzugefügt'));}
 // TOTP-Anzeige
 let otpTimer=null;
 function startOtp(cfg){clearInterval(otpTimer);otpTimer=null;if(!cfg)return;
@@ -257,7 +257,7 @@ function generate(o=genOpt){const sets=['upper','lower','digits','symbols'].filt
   return out.join('');}
 function entropy(pw){if(!pw)return 0;let n=0;if(/[a-z]/.test(pw))n+=26;if(/[A-Z]/.test(pw))n+=26;if(/[0-9]/.test(pw))n+=10;if(/[^a-zA-Z0-9]/.test(pw))n+=32;
   const uniq=new Set(pw).size;return Math.round(Math.log2(n||1)*pw.length*Math.min(1,uniq/Math.max(4,pw.length*0.6)));}
-function meterHtml(pw){const b=pw&&LASTGEN.pw===pw?LASTGEN.bits:entropy(pw);const lvl=b<40?1:b<64?2:b<90?3:4;const lab=pw?['','Schwach','Mittel','Stark','Sehr stark'][lvl]+` · ${b} Bit`:'';
+function meterHtml(pw){const b=pw&&LASTGEN.pw===pw?LASTGEN.bits:entropy(pw);const lvl=b<40?1:b<64?2:b<90?3:4;const lab=pw?T(['','Schwach','Mittel','Stark','Sehr stark'][lvl])+' · '+T('{n} Bit',{n:b}):'';
   return [1,2,3,4].map(i=>`<i class="${pw&&i<=lvl?'on':''}"></i>`).join('')+`<span>${lab}</span>`;}
 
 // ===== Eintrag bearbeiten =====
@@ -265,36 +265,36 @@ function openEditor(entry,tplKey){
   const isNew=!entry;const e=entry;
   const otpInit=e?otpEditValue(e):'';let iconSel=e?parseInt(X.text(X.kid(e,'IconID'))||'0',10):0;const hasCustomIcon=!!(e&&customIconSrc(X.text(X.kid(e,'CustomIconUUID'))));let iconChanged=false;
   const custom=e?X.kids(e,'String').filter(s=>!STD.includes(X.text(X.kid(s,'Key')))&&!(otpInit&&OTP_KEYS.includes(X.text(X.kid(s,'Key'))))&&!isPkKey(X.text(X.kid(s,'Key')))).map(s=>({k:X.text(X.kid(s,'Key')),v:X.text(X.kid(s,'Value')),p:X.kid(s,'Value').attrs.Protected==='True'})):[];
-  const T=e?X.kid(e,'Times'):null;const exp=e&&X.text(X.kid(T,'Expires'))==='True';const expD=e?getTime(e,'ExpiryTime'):null;
+  const Tm=e?X.kid(e,'Times'):null;const exp=e&&X.text(X.kid(Tm,'Expires'))==='True';const expD=e?getTime(e,'ExpiryTime'):null;
   const targetGroup=e?e.parent:curGroupEl();
   const groupsOpts=[];const bin=recycleBin(false);
   (function walk(g,d){if(g===bin)return;groupsOpts.push(`<option value="${esc(uuidOf(g))}"${g===targetGroup?' selected':''}>${'\u2003'.repeat(d)}${esc(gName(g))}</option>`);for(const c of X.kids(g,'Group'))walk(c,d+1);})(rootGroup(),0);
   const pw0=e?str(e,'Password'):genAny();
   const dlg=$('dlg');
-  dlg.innerHTML=`<form class="dlg" method="dialog" id="edForm"><header>${isNew?'Neuer Eintrag':'Eintrag bearbeiten'}</header><div class="body">
-    ${isNew?`<div class="tplrow" id="tplRow">${tplList().map((t,i)=>`<button type="button" class="tplchip${i===0?' on':''}" data-tpl="${esc(t.id)}">${kpSvg(t.icon)}${esc(t.name)}</button>`).join('')}<button type="button" class="tplchip manage" data-act="tplManage" title="Kategorien verwalten">${kpSvg(0,'gear')}Verwalten</button></div>`:''}
-    <label class="f" for="edTitle">Titel</label><div class="inrow"><button type="button" class="iconpick" id="icoBtn" title="Symbol wählen"></button><input class="input" id="edTitle" value="${esc(e?str(e,'Title'):'')}" required></div>
-    <div class="icogrid hidden" id="icoGrid"><button type="button" data-ico="0" title="Monogramm (Standard)" class="mono-ico">Aa</button>${KP_MAP.map((n,i)=>i?`<button type="button" data-ico="${i}" title="${esc(KP_NAMES[i])}">${kpSvg(i)}</button>`:'').join('')}</div>
-    <label class="f" for="edUser">Benutzername</label><input class="input" id="edUser" value="${esc(e?str(e,'UserName'):X.text(X.kid(meta(),'DefaultUserName')))}" autocomplete="off">
-    <label class="f" for="edPw">Passwort</label>
-    <div class="inrow"><input class="input mono" id="edPw" type="password" value="${esc(pw0)}" autocomplete="new-password"><button type="button" class="icon-btn" data-reveal="edPw" title="Anzeigen">${ICON.eye}</button><button type="button" class="icon-btn" id="genToggle" title="Generator">${ICON.dice}</button></div>
+  dlg.innerHTML=`<form class="dlg" method="dialog" id="edForm"><header>${isNew?T('Neuer Eintrag'):T('Eintrag bearbeiten')}</header><div class="body">
+    ${isNew?`<div class="tplrow" id="tplRow">${tplList().map((t,i)=>`<button type="button" class="tplchip${i===0?' on':''}" data-tpl="${esc(t.id)}">${kpSvg(t.icon)}${esc(t.name)}</button>`).join('')}<button type="button" class="tplchip manage" data-act="tplManage" title="${T('Kategorien verwalten')}">${kpSvg(0,'gear')}${T('Verwalten')}</button></div>`:''}
+    <label class="f" for="edTitle">${T('Titel')}</label><div class="inrow"><button type="button" class="iconpick" id="icoBtn" title="${T('Symbol wählen')}"></button><input class="input" id="edTitle" value="${esc(e?str(e,'Title'):'')}" required></div>
+    <div class="icogrid hidden" id="icoGrid"><button type="button" data-ico="0" title="${T('Monogramm (Standard)')}" class="mono-ico">Aa</button>${KP_MAP.map((n,i)=>i?`<button type="button" data-ico="${i}" title="${esc(KP_NAMES[i])}">${kpSvg(i)}</button>`:'').join('')}</div>
+    <label class="f" for="edUser">${T('Benutzername')}</label><input class="input" id="edUser" value="${esc(e?str(e,'UserName'):X.text(X.kid(meta(),'DefaultUserName')))}" autocomplete="off">
+    <label class="f" for="edPw">${T('Passwort')}</label>
+    <div class="inrow"><input class="input mono" id="edPw" type="password" value="${esc(pw0)}" autocomplete="new-password"><button type="button" class="icon-btn" data-reveal="edPw" title="${T('Anzeigen')}">${ICON.eye}</button><button type="button" class="icon-btn" id="genToggle" title="${T('Generator')}">${ICON.dice}</button></div>
     <div class="meter" id="edMeter">${meterHtml(pw0)}</div>
     <div class="gen hidden" id="genBox"></div>
-    <label class="f" for="edOtp">2FA-Schlüssel <span class="muted">(Base32-Schlüssel oder otpauth://-Link, optional)</span></label>
-    <input class="input mono" id="edOtp" value="${esc(otpInit)}" autocomplete="off" spellcheck="false" placeholder="z. B. JBSW Y3DP EHPK 3PXP">
+    <label class="f" for="edOtp">${T('2FA-Schlüssel')} <span class="muted">${T('(Base32-Schlüssel oder otpauth://-Link, optional)')}</span></label>
+    <input class="input mono" id="edOtp" value="${esc(otpInit)}" autocomplete="off" spellcheck="false" placeholder="${T('z. B. JBSW Y3DP EHPK 3PXP')}">
     <div class="err" id="otpErr" style="min-height:0;margin-top:4px"></div>
     <label class="f" for="edUrl">URL</label><input class="input" id="edUrl" value="${esc(e?str(e,'URL'):'')}" inputmode="url" autocomplete="off">
-    <label class="f" for="edNotes">Notizen</label><textarea class="input" id="edNotes">${esc(e?str(e,'Notes'):'')}</textarea>
-    <div class="two"><div><label class="f" for="edGroup">Gruppe</label><select class="input" id="edGroup">${groupsOpts.join('')}</select></div>
-      <div><label class="f" for="edTags">Tags</label><input class="input" id="edTags" value="${esc(e?tagsOf(e).filter(t=>!/^(favorit|favorite|favourite|sensibel|sensitive)$/i.test(t)).join(', '):'')}" placeholder="z. B. arbeit, bank"></div></div>
-    <label class="check"><input type="checkbox" id="edExp"${exp?' checked':''}> Läuft ab am</label>
-    <div class="inrow" style="flex-wrap:wrap"><input class="input${exp?'':' hidden'}" type="date" id="edExpD" value="${expD&&exp?expD.toISOString().slice(0,10):''}" style="max-width:190px"><span class="presets">In <button type="button" class="btn small" data-act="expPreset" data-m="3">3 Monaten</button><button type="button" class="btn small" data-act="expPreset" data-m="6">6 Monaten</button><button type="button" class="btn small" data-act="expPreset" data-m="12">1 Jahr</button></span></div>
-    <label class="check"><input type="checkbox" id="edSens"${e&&isSens(e)?' checked':''}> Sensibel – Anzeigen und Kopieren nur nach erneuter Eingabe des Master-Passworts</label>
-    <label class="f">Eigene Felder</label><div id="cfList"></div>
-    <button type="button" class="btn ghost" id="cfAdd" style="margin-top:6px">${ICON.plus}Feld hinzufügen</button>
-  </div><footer><button type="button" class="btn" value="cancel" id="edCancel">Abbrechen</button><button class="btn primary" id="edSave" value="ok">${isNew?'Eintrag anlegen':'Änderungen speichern'}</button></footer></form>`;
+    <label class="f" for="edNotes">${T('Notizen')}</label><textarea class="input" id="edNotes">${esc(e?str(e,'Notes'):'')}</textarea>
+    <div class="two"><div><label class="f" for="edGroup">${T('Gruppe')}</label><select class="input" id="edGroup">${groupsOpts.join('')}</select></div>
+      <div><label class="f" for="edTags">Tags</label><input class="input" id="edTags" value="${esc(e?tagsOf(e).filter(t=>!/^(favorit|favorite|favourite|sensibel|sensitive)$/i.test(t)).join(', '):'')}" placeholder="${T('z. B. arbeit, bank')}"></div></div>
+    <label class="check"><input type="checkbox" id="edExp"${exp?' checked':''}> ${T('Läuft ab am')}</label>
+    <div class="inrow" style="flex-wrap:wrap"><input class="input${exp?'':' hidden'}" type="date" id="edExpD" value="${expD&&exp?expD.toISOString().slice(0,10):''}" style="max-width:190px"><span class="presets">${T('In')} <button type="button" class="btn small" data-act="expPreset" data-m="3">${T('3 Monaten')}</button><button type="button" class="btn small" data-act="expPreset" data-m="6">${T('6 Monaten')}</button><button type="button" class="btn small" data-act="expPreset" data-m="12">${T('1 Jahr')}</button></span></div>
+    <label class="check"><input type="checkbox" id="edSens"${e&&isSens(e)?' checked':''}> ${T('Sensibel – Anzeigen und Kopieren nur nach erneuter Eingabe des Master-Passworts')}</label>
+    <label class="f">${T('Eigene Felder')}</label><div id="cfList"></div>
+    <button type="button" class="btn ghost" id="cfAdd" style="margin-top:6px">${ICON.plus}${T('Feld hinzufügen')}</button>
+  </div><footer><button type="button" class="btn" value="cancel" id="edCancel">${T('Abbrechen')}</button><button class="btn primary" id="edSave" value="ok">${isNew?T('Eintrag anlegen'):T('Änderungen speichern')}</button></footer></form>`;
   const cfs=custom.slice();
-  const drawCf=()=>{$('cfList').innerHTML=cfs.map((c,i)=>`<div class="cf"><input class="input" data-cf="k" data-i="${i}" value="${esc(c.k)}" placeholder="Name"><input class="input${c.p?' mono':''}" data-cf="v" data-i="${i}" value="${esc(c.v)}" type="${c.p?'password':'text'}" placeholder="Wert"><label class="check" style="margin:0" title="Geschützt (verborgen anzeigen)"><input type="checkbox" data-cf="p" data-i="${i}"${c.p?' checked':''}>🔒</label><button type="button" class="icon-btn" data-cf="del" data-i="${i}" title="Entfernen">×</button></div>`).join('');};
+  const drawCf=()=>{$('cfList').innerHTML=cfs.map((c,i)=>`<div class="cf"><input class="input" data-cf="k" data-i="${i}" value="${esc(c.k)}" placeholder="${T('Name')}"><input class="input${c.p?' mono':''}" data-cf="v" data-i="${i}" value="${esc(c.v)}" type="${c.p?'password':'text'}" placeholder="${T('Wert')}"><label class="check" style="margin:0" title="${T('Geschützt (verborgen anzeigen)')}"><input type="checkbox" data-cf="p" data-i="${i}"${c.p?' checked':''}>🔒</label><button type="button" class="icon-btn" data-cf="del" data-i="${i}" title="${T('Entfernen')}">×</button></div>`).join('');};
   drawCf();
   const drawIco=()=>{$('icoBtn').innerHTML=hasCustomIcon&&!iconChanged?entryBadge(e):iconBadge($('edTitle').value||'?',iconSel,null);
     dlg.querySelectorAll('[data-ico]').forEach(b=>b.classList.toggle('on',+b.dataset.ico===iconSel&&(iconChanged||!hasCustomIcon)));};
@@ -322,14 +322,14 @@ function openEditor(entry,tplKey){
   $('edCancel').onclick=()=>dlg.close();
   $('edForm').onsubmit=ev=>{ev.preventDefault();
     const names=cfs.map(c=>c.k.trim()).filter(Boolean);
-    if(names.some(n=>STD.includes(n))){toast('Eigene Felder dürfen nicht wie Standardfelder heißen.');return;}
-    if(new Set(names).size!==names.length){toast('Zwei eigene Felder haben denselben Namen.');return;}
-    if(names.some(n=>isPkKey(n))){toast('Namen mit „KPEX_PASSKEY_“ sind für Passkeys reserviert.');return;}
-    if(names.some(n=>OTP_KEYS.includes(n))){toast('Für 2FA bitte das Feld „2FA-Schlüssel“ verwenden.');return;}
+    if(names.some(n=>STD.includes(n))){toast(T('Eigene Felder dürfen nicht wie Standardfelder heißen.'));return;}
+    if(new Set(names).size!==names.length){toast(T('Zwei eigene Felder haben denselben Namen.'));return;}
+    if(names.some(n=>isPkKey(n))){toast(T('Namen mit „KPEX_PASSKEY_“ sind für Passkeys reserviert.'));return;}
+    if(names.some(n=>OTP_KEYS.includes(n))){toast(T('Für 2FA bitte das Feld „2FA-Schlüssel“ verwenden.'));return;}
     const otpVal=$('edOtp').value.trim();let otpStore=null;
     if(otpVal!==otpInit&&otpVal){try{parseOtpString(otpVal);}catch(err){$('otpErr').textContent=err.message;$('edOtp').focus();return;}
-      otpStore=/^otpauth:/i.test(otpVal)?otpVal:`otpauth://totp/${encodeURIComponent($('edTitle').value||'Konto')}:${encodeURIComponent($('edUser').value||'')}?secret=${otpVal.toUpperCase().replace(/[\s=-]/g,'')}&period=30&digits=6&issuer=${encodeURIComponent($('edTitle').value||'Konto')}`;}
-    checkpoint(isNew?'Eintrag anlegen':'Eintrag bearbeiten');
+      otpStore=/^otpauth:/i.test(otpVal)?otpVal:`otpauth://totp/${encodeURIComponent($('edTitle').value||T('Konto'))}:${encodeURIComponent($('edUser').value||'')}?secret=${otpVal.toUpperCase().replace(/[\s=-]/g,'')}&period=30&digits=6&issuer=${encodeURIComponent($('edTitle').value||T('Konto'))}`;}
+    checkpoint(isNew?T('Eintrag anlegen'):T('Eintrag bearbeiten'));
     let target=e;
     if(isNew){target=makeEntry();}else pushHistory(target);
     setStr(target,'Title',$('edTitle').value,isProt(target,'Title')||protDefault('Title'));
@@ -342,30 +342,30 @@ function openEditor(entry,tplKey){
     if(iconChanged){X.setText(X.ensure(target,'IconID'),String(iconSel));const cu=X.kid(target,'CustomIconUUID');if(cu)X.remove(cu);}
     for(const c of cfs)if(c.k.trim())setStr(target,c.k.trim(),c.v,c.p);
     {const tg=$('edTags').value.split(/[;,]/).map(s=>s.trim()).filter(Boolean).filter(t=>!/^(favorit|favorite|favourite|sensibel|sensitive)$/i.test(t));
-      if(!isNew&&isFav(e))tg.push('Favorit');if($('edSens').checked)tg.push('Sensibel');X.setText(X.ensure(target,'Tags'),tg.join(';'));}
-    const T=X.ensure(target,'Times');
-    if($('edExp').checked&&$('edExpD').value){X.setText(X.ensure(T,'Expires'),'True');setTime(target,'ExpiryTime',new Date($('edExpD').value+'T00:00:00'));}
-    else X.setText(X.ensure(T,'Expires'),'False');
+      if(!isNew&&isFav(e))tg.push(T('Favorit'));if($('edSens').checked)tg.push(T('Sensibel'));X.setText(X.ensure(target,'Tags'),tg.join(';'));}
+    const Tm=X.ensure(target,'Times');
+    if($('edExp').checked&&$('edExpD').value){X.setText(X.ensure(Tm,'Expires'),'True');setTime(target,'ExpiryTime',new Date($('edExpD').value+'T00:00:00'));}
+    else X.setText(X.ensure(Tm,'Expires'),'False');
     touch(target);
     const g=findGroup($('edGroup').value)||rootGroup();
     if(isNew)insertEntry(g,target);else if(target.parent!==g)moveTo(target,g);
-    S.entry=target;S.sel.clear();markDirty();dlg.close();render();undoToast(isNew?'Eintrag angelegt':'Änderungen übernommen');showView('detail');};
+    S.entry=target;S.sel.clear();markDirty();dlg.close();render();undoToast(isNew?T('Eintrag angelegt'):T('Änderungen übernommen'));showView('detail');};
   dlg.showModal();$('edTitle').focus();if(isNew){const k=tplKey||(tplList()[0]||{}).id;const tb=k&&dlg.querySelector(`[data-tpl="${CSS.escape(k)}"]`);if(tb&&(tplKey||k!=='login'))tb.click();}}
 
 // ===== Gruppen =====
 function groupDialog(g){
   const dlg=$('dlg');const isNew=!g;
   const canDel=g&&g!==rootGroup();
-  dlg.innerHTML=`<form class="dlg" id="gForm"><header>${isNew?'Neue Gruppe':'Gruppe bearbeiten'}</header><div class="body">
-    <label class="f" for="gName">Name</label><input class="input" id="gName" value="${esc(g?gName(g):'')}" required>
-    ${isNew?`<p class="note">Wird angelegt in: ${esc(gName(curGroupEl()))}</p>`:''}
-  </div><footer>${!isNew?`<button type="button" class="btn" data-act="bundle" data-uuid="${esc(uuidOf(g))}">Als Kundenmappe …</button>`:''}${canDel?`<button type="button" class="btn danger left" id="gDel">${ICON.trash}${inBin(g)||g===recycleBin(false)?'Endgültig löschen':'Löschen'}</button>`:''}<button type="button" class="btn" id="gCancel">Abbrechen</button><button class="btn primary">${isNew?'Gruppe anlegen':'Speichern'}</button></footer></form>`;
+  dlg.innerHTML=`<form class="dlg" id="gForm"><header>${isNew?T('Neue Gruppe'):T('Gruppe bearbeiten')}</header><div class="body">
+    <label class="f" for="gName">${T('Name')}</label><input class="input" id="gName" value="${esc(g?gName(g):'')}" required>
+    ${isNew?`<p class="note">${T('Wird angelegt in: {g}',{g:esc(gName(curGroupEl()))})}</p>`:''}
+  </div><footer>${!isNew?`<button type="button" class="btn" data-act="bundle" data-uuid="${esc(uuidOf(g))}">${T('Als Kundenmappe …')}</button>`:''}${canDel?`<button type="button" class="btn danger left" id="gDel">${ICON.trash}${inBin(g)||g===recycleBin(false)?T('Endgültig löschen'):T('Löschen')}</button>`:''}<button type="button" class="btn" id="gCancel">${T('Abbrechen')}</button><button class="btn primary">${isNew?T('Gruppe anlegen'):T('Speichern')}</button></footer></form>`;
   $('gCancel').onclick=()=>dlg.close();
   if(canDel)$('gDel').onclick=()=>{const n=allEntries(g,[],false).length;
-    if(!confirm(n?`Die Gruppe „${gName(g)}“ mit ${n} Einträgen löschen?`:`Die Gruppe „${gName(g)}“ löschen?`))return;
-    checkpoint('Gruppe löschen');if(g===recycleBin(false)){recordDeleted(g);X.remove(g);X.setText(X.ensure(meta(),'RecycleBinUUID'),'AAAAAAAAAAAAAAAAAAAAAA==');}else deleteEl(g);
-    S.group='all';S.entry=null;markDirty();dlg.close();render();undoToast('Gruppe gelöscht');};
-  $('gForm').onsubmit=ev=>{ev.preventDefault();const name=$('gName').value.trim();if(!name)return;checkpoint(isNew?'Gruppe anlegen':'Gruppe umbenennen');
+    if(!confirm(n?T('Die Gruppe „{g}“ mit {n} Einträgen löschen?',{g:gName(g),n}):T('Die Gruppe „{g}“ löschen?',{g:gName(g)})))return;
+    checkpoint(T('Gruppe löschen'));if(g===recycleBin(false)){recordDeleted(g);X.remove(g);X.setText(X.ensure(meta(),'RecycleBinUUID'),'AAAAAAAAAAAAAAAAAAAAAA==');}else deleteEl(g);
+    S.group='all';S.entry=null;markDirty();dlg.close();render();undoToast(T('Gruppe gelöscht'));};
+  $('gForm').onsubmit=ev=>{ev.preventDefault();const name=$('gName').value.trim();if(!name)return;checkpoint(isNew?T('Gruppe anlegen'):T('Gruppe umbenennen'));
     if(isNew){const parent=curGroupEl();const ng=makeGroup(name);insertGroup(parent,ng);S.group=ng;}
     else{X.setText(X.ensure(g,'Name'),name);touch(g);}
     markDirty();dlg.close();render();};
@@ -375,46 +375,47 @@ function groupDialog(g){
 function settingsDialog(){
   const dlg=$('dlg');const kdfU=hex(S.db.kdf.$UUID.v);
   const kdfName=kdfU===KDF_ARGON2D?'Argon2d':kdfU===KDF_ARGON2ID?'Argon2id':'AES-KDF';
-  dlg.innerHTML=`<form class="dlg" id="sForm"><header>Einstellungen</header><div class="body">
-    <label class="f" for="sName">Name</label><input class="input" id="sName" value="${esc(X.text(X.kid(meta(),'DatabaseName')))}">
-    <label class="f" for="sUser">Standard-Benutzername für neue Einträge</label><input class="input" id="sUser" value="${esc(X.text(X.kid(meta(),'DefaultUserName')))}">
-    <label class="check"><input type="checkbox" id="sBin"${binEnabled()?' checked':''}> Gelöschte Einträge zuerst in den Papierkorb</label>
-    <label class="f">Master-Passwort ändern <span class="muted">(leer lassen, um es zu behalten)</span></label>
-    <div class="two"><input class="input" type="password" id="sPw" placeholder="Neues Passwort" autocomplete="new-password"><input class="input" type="password" id="sPw2" placeholder="Wiederholen" autocomplete="new-password"></div>
+  dlg.innerHTML=`<form class="dlg" id="sForm"><header>${T('Einstellungen')}</header><div class="body">
+    <label class="f" for="sName">${T('Name')}</label><input class="input" id="sName" value="${esc(X.text(X.kid(meta(),'DatabaseName')))}">
+    <label class="f" for="sUser">${T('Standard-Benutzername für neue Einträge')}</label><input class="input" id="sUser" value="${esc(X.text(X.kid(meta(),'DefaultUserName')))}">
+    <label class="check"><input type="checkbox" id="sBin"${binEnabled()?' checked':''}> ${T('Gelöschte Einträge zuerst in den Papierkorb')}</label>
+    <label class="f">${T('Master-Passwort ändern')} <span class="muted">${T('(leer lassen, um es zu behalten)')}</span></label>
+    <div class="two"><input class="input" type="password" id="sPw" placeholder="${T('Neues Passwort')}" autocomplete="new-password"><input class="input" type="password" id="sPw2" placeholder="${T('Wiederholen')}" autocomplete="new-password"></div>
     <div class="meter" id="sMeter"></div>
     <div class="progress hidden" id="sProg"><i></i></div>
-    <h3 class="sh">Schutz gegen Passwort-Raten</h3><div id="kdfBox"><p class="note">Wird gemessen …</p></div>
-    <h3 class="sh">Daten</h3>
-    <div class="inrow" style="flex-wrap:wrap;margin-top:10px"><button type="button" class="btn" data-act="imp">CSV importieren …</button><button type="button" class="btn" data-act="exp">Als CSV exportieren …</button><button type="button" class="btn" data-act="mrg">Mit anderer .kdbx zusammenführen …</button><button type="button" class="btn" data-act="sheet">Notfallblatt drucken …</button><button type="button" class="btn" data-act="tplManage">Kategorien verwalten …</button><button type="button" class="btn" data-act="dups">Duplikate suchen …</button></div>
-    <p class="note">Zusammenführen übernimmt Änderungen aus einer anderen Fassung dieser Datenbank, z. B. vom iPad – der jeweils neuere Stand gewinnt, ältere landen im Verlauf.</p>
-    <h3 class="sh">Diese App auf diesem Gerät</h3>
-    <div class="two"><div><label class="f" for="pTheme">Darstellung</label><select class="input" id="pTheme">${[['auto','Wie System'],['light','Hell'],['dark','Dunkel']].map(([v,l])=>`<option value="${v}"${prefs.theme===v?' selected':''}>${l}</option>`).join('')}</select></div>
-      <div><label class="f" for="pIdle">Automatisch sperren nach</label><select class="input" id="pIdle">${[[1,'1 Minute'],[5,'5 Minuten'],[10,'10 Minuten'],[30,'30 Minuten'],[0,'Nie']].map(([v,l])=>`<option value="${v}"${prefs.idle===v?' selected':''}>${l}</option>`).join('')}</select></div></div>
-    <label class="check"><input type="checkbox" id="pHide"${prefs.lockOnHide?' checked':''}> Sperren, sobald der Tab verlassen oder der Bildschirm gesperrt wird</label>
-    <label class="check"><input type="checkbox" id="pDate"${prefs.dateSuffix?' checked':''}> Datum und Uhrzeit an heruntergeladene Dateien anhängen</label>
-    <label class="check"><input type="checkbox" id="pCompact"${prefs.compact?' checked':''}> Kompakte Liste</label>
-    <p class="note">Format: KDBX ${S.db.major}.${S.db.minor} · ${S.db.cipher===CIPHER_CHACHA?'ChaCha20':'AES-256'} · ${kdfName}${S.keyFile?' · mit Schlüsseldatei (bleibt erhalten)':''}<br>Datei: ${esc(S.fileName)}</p>
-  </div><footer><button type="button" class="btn" id="sCancel">Abbrechen</button><button class="btn primary" id="sOk">Übernehmen</button></footer></form>`;
+    <h3 class="sh">${T('Schutz gegen Passwort-Raten')}</h3><div id="kdfBox"><p class="note">${T('Wird gemessen …')}</p></div>
+    <h3 class="sh">${T('Daten')}</h3>
+    <div class="inrow" style="flex-wrap:wrap;margin-top:10px"><button type="button" class="btn" data-act="imp">${T('CSV importieren …')}</button><button type="button" class="btn" data-act="exp">${T('Als CSV exportieren …')}</button><button type="button" class="btn" data-act="mrg">${T('Mit anderer .kdbx zusammenführen …')}</button><button type="button" class="btn" data-act="sheet">${T('Notfallblatt drucken …')}</button><button type="button" class="btn" data-act="tplManage">${T('Kategorien verwalten …')}</button><button type="button" class="btn" data-act="dups">${T('Duplikate suchen …')}</button></div>
+    <p class="note">${T('Zusammenführen übernimmt Änderungen aus einer anderen Fassung dieser Datenbank, z. B. vom iPad – der jeweils neuere Stand gewinnt, ältere landen im Verlauf.')}</p>
+    <h3 class="sh">${T('Diese App auf diesem Gerät')}</h3>
+    <div class="two"><div><label class="f" for="pTheme">${T('Darstellung')}</label><select class="input" id="pTheme">${[['auto',T('Wie System')],['light',T('Hell')],['dark',T('Dunkel')]].map(([v,l])=>`<option value="${v}"${prefs.theme===v?' selected':''}>${l}</option>`).join('')}</select></div>
+      <div><label class="f" for="pIdle">${T('Automatisch sperren nach')}</label><select class="input" id="pIdle">${[[1,T('1 Minute')],[5,T('5 Minuten')],[10,T('10 Minuten')],[30,T('30 Minuten')],[0,T('Nie')]].map(([v,l])=>`<option value="${v}"${prefs.idle===v?' selected':''}>${l}</option>`).join('')}</select></div></div>
+    <label class="f" for="pLang">${T('Sprache')}${LANG==='de'?' <span class="muted">· Language</span>':''}</label><select class="input" id="pLang" style="max-width:260px">${langOptions()}</select>
+    <label class="check"><input type="checkbox" id="pHide"${prefs.lockOnHide?' checked':''}> ${T('Sperren, sobald der Tab verlassen oder der Bildschirm gesperrt wird')}</label>
+    <label class="check"><input type="checkbox" id="pDate"${prefs.dateSuffix?' checked':''}> ${T('Datum und Uhrzeit an heruntergeladene Dateien anhängen')}</label>
+    <label class="check"><input type="checkbox" id="pCompact"${prefs.compact?' checked':''}> ${T('Kompakte Liste')}</label>
+    <p class="note">${T('Format')}: KDBX ${S.db.major}.${S.db.minor} · ${S.db.cipher===CIPHER_CHACHA?'ChaCha20':'AES-256'} · ${kdfName}${S.keyFile?' · '+T('mit Schlüsseldatei (bleibt erhalten)'):''}<br>${T('Datei')}: ${esc(S.fileName)}</p>
+  </div><footer><button type="button" class="btn" id="sCancel">${T('Abbrechen')}</button><button class="btn primary" id="sOk">${T('Übernehmen')}</button></footer></form>`;
   $('sPw').oninput=()=>$('sMeter').innerHTML=meterHtml($('sPw').value);
   $('sCancel').onclick=()=>dlg.close();
   $('sForm').onsubmit=async ev=>{ev.preventDefault();
-    checkpoint('Einstellungen');const m=meta();X.setText(X.ensure(m,'DatabaseName'),$('sName').value);X.setText(X.ensure(m,'DatabaseNameChanged'),timeStr(S.db));
+    checkpoint(T('Einstellungen'));const m=meta();X.setText(X.ensure(m,'DatabaseName'),$('sName').value);X.setText(X.ensure(m,'DatabaseNameChanged'),timeStr(S.db));
     X.setText(X.ensure(m,'DefaultUserName'),$('sUser').value);X.setText(X.ensure(m,'RecycleBinEnabled'),$('sBin').checked?'True':'False');
-    Object.assign(prefs,{theme:$('pTheme').value,idle:+$('pIdle').value,lockOnHide:$('pHide').checked,dateSuffix:$('pDate').checked,compact:$('pCompact').checked});savePrefs();resetIdle();
+    Object.assign(prefs,{theme:$('pTheme').value,idle:+$('pIdle').value,lockOnHide:$('pHide').checked,dateSuffix:$('pDate').checked,compact:$('pCompact').checked});const langChanged=setLang($('pLang').value);savePrefs();resetIdle();
     const p1=$('sPw').value,p2=$('sPw2').value;
-    if((p1||p2)&&p1!==p2){toast('Die Passwörter stimmen nicht überein.');return;}
+    if((p1||p2)&&p1!==p2){toast(T('Die Passwörter stimmen nicht überein.'));return;}
     const nk=kdfChoice();
     if(p1||nk){$('sOk').disabled=true;$('sProg').classList.remove('hidden');
       if(nk)S.db.kdf=nk;else S.db.kdf.S.v=rnd(32);if(S.db.major===4)S.db.kdfRaw=writeVarDict(S.db.kdf);
       if(p1)S.db.composite=await compositeKey(p1,S.keyFile);
       S.db.transformed=await runKdf(S.db.kdf,S.db.composite,x=>$('sProg').firstChild.style.width=(x*100)+'%');
       if(p1)X.setText(X.ensure(m,'MasterKeyChanged'),timeStr(S.db));
-      toast(p1&&nk?'Master-Passwort und Schutzstufe geändert – jetzt speichern':p1?'Master-Passwort geändert – jetzt speichern':'Neue Schutzstufe übernommen – jetzt speichern');}
-    markDirty();dlg.close();render();};
+      toast(p1&&nk?T('Master-Passwort und Schutzstufe geändert – jetzt speichern'):p1?T('Master-Passwort geändert – jetzt speichern'):T('Neue Schutzstufe übernommen – jetzt speichern'));}
+    markDirty();dlg.close();render();if(langChanged)langChangedToast();};
   dlg.showModal();mountSetKdf($('kdfBox'));}
 
 // ===== Speichern =====
-function dlName(){const base=(S.fileName||'Passwoerter.kdbx').replace(/\.kdbx$/i,'').replace(/_\d{4}-\d{2}-\d{2}_\d{4}$/,'');
+function dlName(){const base=(S.fileName||T('Passwoerter.kdbx')).replace(/\.kdbx$/i,'').replace(/_\d{4}-\d{2}-\d{2}_\d{4}$/,'');
   if(!prefs.dateSuffix)return base+'.kdbx';const d=new Date(),p=n=>String(n).padStart(2,'0');
   return `${base}_${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}.kdbx`;}
 
@@ -426,7 +427,7 @@ async function lock(){
   $('dlg').open&&$('dlg').close();$('app').classList.add('hidden');$('lock').classList.remove('hidden');
   $('detail').innerHTML='';$('list').innerHTML='';$('groups').innerHTML='';
   $('pendingNote').classList.toggle('hidden',!S.pending);
-  $('dropName').textContent=S.fileName||'.kdbx-Datei auswählen';$('dropHint').textContent=S.fileName?'Andere Datei wählen':'oder hierher ziehen';
+  $('dropName').textContent=S.fileName||T('.kdbx-Datei auswählen');$('dropHint').textContent=S.fileName?T('Andere Datei wählen'):T('oder hierher ziehen');
   $('pwOpen').value='';$('pwOpen').focus();}
 function enterApp(){
   $('lock').classList.add('hidden');$('app').classList.remove('hidden');
@@ -457,7 +458,7 @@ async function pickFile(){
   if(window.showOpenFilePicker){try{const [h]=await showOpenFilePicker({types:[{description:'KeePass',accept:{'application/octet-stream':['.kdbx']}}]});const f=await h.getFile();setFile(f,h);return;}catch(e){if(e.name==='AbortError')return;}}
   $('fileIn').click();}
 async function setFile(f,handle){S.fileName=f.name;S.fileBytes=new Uint8Array(await f.arrayBuffer());S.fileHandle=handle||null;S.fileMtime=f.lastModified||0;S.pending=false;$('pendingNote').classList.add('hidden');
-  $('dropName').textContent=f.name;$('dropHint').textContent=handle?'Speichern schreibt direkt in diese Datei':'Speichern lädt eine neue Version herunter';$('openErr').textContent='';$('pwOpen').focus();}
+  $('dropName').textContent=f.name;$('dropHint').textContent=handle?T('Speichern schreibt direkt in diese Datei'):T('Speichern lädt eine neue Version herunter');$('openErr').textContent='';$('pwOpen').focus();}
 $('drop').onclick=pickFile;$('drop').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();pickFile();}};
 $('fileIn').onchange=e=>{if(e.target.files[0])setFile(e.target.files[0]);};
 ['dragover','dragenter'].forEach(t=>$('drop').addEventListener(t,e=>{e.preventDefault();$('drop').classList.add('over');}));
@@ -467,9 +468,9 @@ $('drop').addEventListener('drop',async e=>{const it=e.dataTransfer.items&&e.dat
   const f=e.dataTransfer.files[0];if(f)setFile(f);});
 $('kfBtn').onclick=()=>$('kfIn').click();
 $('kfIn').onchange=async e=>{const f=e.target.files[0];if(!f)return;S.keyFile=new Uint8Array(await f.arrayBuffer());S.keyFileName=f.name;$('kfName').textContent=f.name;$('kfClear').classList.remove('hidden');};
-$('kfClear').onclick=()=>{S.keyFile=null;$('kfName').textContent='Keine';$('kfClear').classList.add('hidden');$('kfIn').value='';};
+$('kfClear').onclick=()=>{S.keyFile=null;$('kfName').textContent=T('Keine');$('kfClear').classList.add('hidden');$('kfIn').value='';};
 $('fOpen').onsubmit=async ev=>{ev.preventDefault();
-  if(!S.fileBytes){$('openErr').textContent='Wähle zuerst eine .kdbx-Datei aus.';return;}
+  if(!S.fileBytes){$('openErr').textContent=T('Wähle zuerst eine .kdbx-Datei aus.');return;}
   const btn=$('openBtn');btn.disabled=true;$('openErr').textContent='';$('prog').classList.remove('hidden');const bar=$('prog').firstChild;bar.style.width='0';
   try{S.db=await kdbxOpen(S.fileBytes,$('pwOpen').value,S.keyFile,throttled(x=>{bar.style.width=(x*100)+'%';dialTo(x);}));
     $('pwOpen').value='';startSession(S.pending);S.pending=false;enterApp();}
@@ -477,12 +478,12 @@ $('fOpen').onsubmit=async ev=>{ev.preventDefault();
   finally{btn.disabled=false;$('prog').classList.add('hidden');}};
 $('newPw').oninput=()=>$('newMeter').innerHTML=meterHtml($('newPw').value);
 $('fNew').onsubmit=async ev=>{ev.preventDefault();
-  const p1=$('newPw').value,p2=$('newPw2').value,name=$('newName').value.trim()||'Passwörter';
-  if(!p1){$('newErr').textContent='Lege ein Master-Passwort fest.';return;}
-  if(p1!==p2){$('newErr').textContent='Die Passwörter stimmen nicht überein.';return;}
+  const p1=$('newPw').value,p2=$('newPw2').value,name=$('newName').value.trim()||T('Passwörter');
+  if(!p1){$('newErr').textContent=T('Lege ein Master-Passwort fest.');return;}
+  if(p1!==p2){$('newErr').textContent=T('Die Passwörter stimmen nicht überein.');return;}
   $('newErr').textContent='';$('prog2').classList.remove('hidden');const bar=$('prog2').firstChild;
   try{S.db=await kdbxCreate(name,p1,null,throttled(x=>{bar.style.width=(x*100)+'%';dialTo(x);}),kdfFromPreset(NEWKDF,4));
-    S.keyFile=null;S.fileHandle=null;S.fileMtime=0;S.fileName=name.replace(/[\\/:*?"<>|]/g,'_')+'.kdbx';S.fileBytes=null;startSession(true);$('newPw').value=$('newPw2').value='';enterApp();toast('Datenbank erstellt – speichern nicht vergessen');}
+    S.keyFile=null;S.fileHandle=null;S.fileMtime=0;S.fileName=name.replace(/[\\/:*?"<>|]/g,'_')+'.kdbx';S.fileBytes=null;startSession(true);$('newPw').value=$('newPw2').value='';enterApp();toast(T('Datenbank erstellt – speichern nicht vergessen'));}
   catch(e){$('newErr').textContent=e.message;}finally{$('prog2').classList.add('hidden');}};
 
 // ===== App: Ereignisse =====
@@ -495,28 +496,28 @@ document.addEventListener('click',async ev=>{
   else if(a==='copyOtp'){}
   else if(a==='attAdd'){const inp=document.createElement('input');inp.type='file';const e=S.entry;pickingFile=true;
     inp.onchange=()=>{pickingFile=false;if(inp.files[0])addAttachment(e,inp.files[0]);};inp.addEventListener('cancel',()=>pickingFile=false);setTimeout(()=>pickingFile=false,60000);inp.click();}
-  else if(a==='attDel'){const bel=X.kids(S.entry,'Binary')[+b.dataset.i];if(!bel||!confirm(`Anhang „${X.text(X.kid(bel,'Key'))}“ entfernen? Er bleibt im Verlauf erhalten.`))return;
-    checkpoint('Anhang entfernen');pushHistory(S.entry);X.remove(bel);touch(S.entry);markDirty();renderDetail();undoToast('Anhang entfernt');}
+  else if(a==='attDel'){const bel=X.kids(S.entry,'Binary')[+b.dataset.i];if(!bel||!confirm(T('Anhang „{a}“ entfernen? Er bleibt im Verlauf erhalten.',{a:X.text(X.kid(bel,'Key'))})))return;
+    checkpoint(T('Anhang entfernen'));pushHistory(S.entry);X.remove(bel);touch(S.entry);markDirty();renderDetail();undoToast(T('Anhang entfernt'));}
   else if(a==='group'){S.group=b.dataset.uuid?findGroup(b.dataset.uuid):'all';S.query='';$('q').value='';renderGroups();renderList();showView('list');}
   else if(a==='entry'){selectEntryClick(b.dataset.uuid,ev);}
   else if(a==='reveal'){reveal=!reveal;renderDetail();}
   else if(a==='copy'){const k=b.dataset.key;const val=k==='#otp'?($('otpCode')||{}).dataset?.code:str(S.entry,k);if(!val)return;
     await copyText(val);setTime(S.entry,'LastAccessTime',new Date());markCopied(k);
-    toast((k==='Password'?'Passwort':k==='UserName'?'Benutzername':k==='#otp'?'Einmalcode':k)+' kopiert – wird in 30 s geleert');}
+    toast(T('{x} kopiert – wird in 30 s geleert',{x:k==='Password'?T('Passwort'):k==='UserName'?T('Benutzername'):k==='#otp'?T('Einmalcode'):k==='URL'?'URL':k}));}
   else if(a==='edit')openEditor(S.entry);
   else if(a==='newEntry')openEditor(null);
   else if(a==='delEntry'){deleteEntries([S.entry]);}
-  else if(a==='restore'){const e=S.entry;const h=X.kids(X.kid(e,'History'),'Entry')[+b.dataset.i];if(!h||!confirm('Diese frühere Version wiederherstellen? Der aktuelle Stand wandert in den Verlauf.'))return;
-    checkpoint('Version wiederherstellen');pushHistory(e);for(const s of X.kids(e,'String'))X.remove(s);for(const bn of X.kids(e,'Binary'))X.remove(bn);
+  else if(a==='restore'){const e=S.entry;const h=X.kids(X.kid(e,'History'),'Entry')[+b.dataset.i];if(!h||!confirm(T('Diese frühere Version wiederherstellen? Der aktuelle Stand wandert in den Verlauf.')))return;
+    checkpoint(T('Version wiederherstellen'));pushHistory(e);for(const s of X.kids(e,'String'))X.remove(s);for(const bn of X.kids(e,'Binary'))X.remove(bn);
     const at=e.children.find(c=>typeof c!=='string'&&(c.name==='Binary'||c.name==='AutoType'||c.name==='History'));let idx=at?e.children.indexOf(at):e.children.length;
     for(const s of X.kids(h,'String'))X.insertAt(e,X.clone(s,e),idx++);
-    {const at2=e.children.find(c=>typeof c!=='string'&&(c.name==='AutoType'||c.name==='History'));let j=at2?e.children.indexOf(at2):e.children.length;for(const bn of X.kids(h,'Binary'))X.insertAt(e,X.clone(bn,e),j++);}touch(e);markDirty();renderDetail();renderList();undoToast('Version wiederhergestellt');}
+    {const at2=e.children.find(c=>typeof c!=='string'&&(c.name==='AutoType'||c.name==='History'));let j=at2?e.children.indexOf(at2):e.children.length;for(const bn of X.kids(h,'Binary'))X.insertAt(e,X.clone(bn,e),j++);}touch(e);markDirty();renderDetail();renderList();undoToast(T('Version wiederhergestellt'));}
   else if(a==='att'){const bel=X.kids(S.entry,'Binary')[+b.dataset.i];const name=X.text(X.kid(bel,'Key'));const v=X.kid(bel,'Value');let data;
     try{const ref=v.attrs.Ref;
       if(ref!==undefined){if(S.db.major===4)data=S.db.binaries[+ref].data;else{const mb=X.kids(X.kid(meta(),'Binaries'),'Binary').find(x=>x.attrs.ID===ref);data=unb64(X.text(mb));if(mb.attrs.Compressed==='True')data=await gunzip(data);}}
       else data=unb64(X.text(v));
       const a2=document.createElement('a');a2.href=URL.createObjectURL(new Blob([data]));a2.download=name;document.body.appendChild(a2);a2.click();a2.remove();}
-    catch(e){toast('Anhang konnte nicht gelesen werden.');}}
+    catch(e){toast(T('Anhang konnte nicht gelesen werden.'));}}
   else if(a==='newGroup')groupDialog(null);
   else if(a==='groupMenu')groupDialog(S.group);
   else if(a==='save')save();

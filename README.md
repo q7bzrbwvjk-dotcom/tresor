@@ -6,7 +6,7 @@
 
 > **Try it:** [https://q7bzrbwvjk-dotcom.github.io/tresor/](https://q7bzrbwvjk-dotcom.github.io/tresor/) · **Download:** [latest release](https://github.com/q7bzrbwvjk-dotcom/tresor/releases/latest)
 >
-> The user interface is currently in **German**.
+> The user interface is available in **English** and **German**. It follows your browser language and can be switched on the start screen or in Settings.
 
 ## Why Tresor?
 
@@ -25,6 +25,7 @@
 | 2FA & passkeys | TOTP codes (KeePassXC, KeePass 2 and KeeOtp formats) · stores KeePassXC/Strongbox passkeys |
 | Productivity | Command palette (⌘K), keyboard navigation, drag & drop, multi-select, favourites, customisable entry categories |
 | Data | Merge two versions of a database · CSV import (Bitwarden, 1Password, LastPass, Chrome, Firefox, Apple, KeePassXC) · CSV export |
+| Languages | English and German interface, passphrase word lists in both languages |
 | Sharing & print | Export a group as its own encrypted database · Wi-Fi cards with QR code · emergency sheet |
 
 <p align="center"><img src="docs/entry.png" width="66%" alt="Entry view"> <img src="docs/mobile.png" width="24%" alt="Mobile view"></p>

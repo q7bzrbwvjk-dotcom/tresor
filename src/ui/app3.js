@@ -5,9 +5,9 @@
 const PSEUDO=['all','report','fav','recent','home'];
 // ---- Favoriten & Zuletzt verwendet ----
 const isFav=e=>tagsOf(e).some(t=>/^(favorit|favorite|favourite)$/i.test(t));
-function toggleFav(e){checkpoint(isFav(e)?'Favorit entfernen':'Als Favorit markieren');const t=tagsOf(e);
-  X.setText(X.ensure(e,'Tags'),(isFav(e)?t.filter(x=>!/^(favorit|favorite|favourite)$/i.test(x)):[...t,'Favorit']).join(';'));touch(e);markDirty();render();
-  undoToast(isFav(e)?'Zu Favoriten hinzugefügt':'Aus Favoriten entfernt');}
+function toggleFav(e){checkpoint(isFav(e)?T('Favorit entfernen'):T('Als Favorit markieren'));const t=tagsOf(e);
+  X.setText(X.ensure(e,'Tags'),(isFav(e)?t.filter(x=>!/^(favorit|favorite|favourite)$/i.test(x)):[...t,T('Favorit')]).join(';'));touch(e);markDirty();render();
+  undoToast(isFav(e)?T('Zu Favoriten hinzugefügt'):T('Aus Favoriten entfernt'));}
 function markAccess(e){if(e)setTime(e,'LastAccessTime',new Date());}
 function recentList(){const es=allEntries(rootGroup()).map(e=>({e,a:getTime(e,'LastAccessTime'),c:getTime(e,'CreationTime')})).filter(x=>x.a&&(!x.c||x.a-x.c>2000));
   return es.sort((a,b)=>b.a-a.a).slice(0,20).map(x=>x.e);}
@@ -19,13 +19,13 @@ function badgeStyle(e){const h=hostOf(str(e,'URL'));if(!h)return '';const b=BRAN
   if(b){const n=parseInt(b.slice(1),16),r=n>>16,g=(n>>8)&255,bl=n&255;const lum=(0.299*r+0.587*g+0.114*bl)/255;return `background:${b};color:${lum>0.62?'#1d1d1d':'#fff'};--ic:${lum>0.62?'#1d1d1d':'#fff'}`;}
   return `background:hsl(${hue(baseDomain(h))} 32% 42%)`;}
 // ---- Fokus-Modus ----
-function toggleFocus(){prefs.focus=!prefs.focus;savePrefs();toast(prefs.focus?'Fokus-Modus an – ⌘\\ beendet ihn':'Fokus-Modus aus');}
+function toggleFocus(){prefs.focus=!prefs.focus;savePrefs();toast(prefs.focus?T('Fokus-Modus an – ⌘\\ beendet ihn'):T('Fokus-Modus aus'));}
 // ---- Ablauf ----
 const DAY=864e5;
-function expiresSoon(e,days=30){const T=X.kid(e,'Times');if(X.text(X.kid(T,'Expires'))!=='True')return false;const d=getTime(e,'ExpiryTime');return d&&d>=new Date()&&d-new Date()<days*DAY;}
+function expiresSoon(e,days=30){const Tm=X.kid(e,'Times');if(X.text(X.kid(Tm,'Expires'))!=='True')return false;const d=getTime(e,'ExpiryTime');return d&&d>=new Date()&&d-new Date()<days*DAY;}
 function notifyExpiry(){const es=allEntries(rootGroup());const n=es.filter(expired).length,s=es.filter(e=>expiresSoon(e)).length;if(!n&&!s)return;
-  const parts=[];if(n)parts.push(`${n} ${n===1?'Passwort ist':'Passwörter sind'} abgelaufen`);if(s)parts.push(`${s} ${s===1?'läuft':'laufen'} in den nächsten 30 Tagen ab`);
-  setTimeout(()=>toast(parts.join(', '),{label:'Anzeigen',fn:()=>goGroup('report')}),400);}
+  const parts=[];if(n)parts.push(T(n===1?'{n} Passwort ist abgelaufen':'{n} Passwörter sind abgelaufen',{n}));if(s)parts.push(T(s===1?'{n} läuft in den nächsten 30 Tagen ab':'{n} laufen in den nächsten 30 Tagen ab',{n:s}));
+  setTimeout(()=>toast(parts.join(', '),{label:T('Anzeigen'),fn:()=>goGroup('report')}),400);}
 // ---- Duplikate ----
 function dupKey(e){const h=baseDomain(hostOf(str(e,'URL')));const u=str(e,'UserName').trim().toLowerCase();const t=str(e,'Title').trim().toLowerCase();
   if(!u&&!str(e,'Password'))return null;return (h||'t:'+t)+'|'+u;}
@@ -36,7 +36,7 @@ function mergeDuplicateGroup(list){const keep=list[0];const H=X.ensure(keep,'His
     for(const h of X.kids(X.kid(o,'History'),'Entry'))X.append(H,X.clone(h,H));
     const c=X.clone(o,null);const ch=X.kid(c,'History');if(ch)X.remove(ch);X.append(H,c);
     for(const s of X.kids(o,'String')){const k=X.text(X.kid(s,'Key'));const v=X.text(X.kid(s,'Value'));
-      if(k==='Notes'){const kn=str(keep,'Notes');if(v&&!kn.includes(v))setStr(keep,'Notes',kn?kn+'\n\n— aus „'+(str(o,'Title')||'Ohne Titel')+'“ —\n'+v:v,isProt(keep,'Notes'));}
+      if(k==='Notes'){const kn=str(keep,'Notes');if(v&&!kn.includes(v))setStr(keep,'Notes',kn?kn+'\n\n'+T('— aus „{t}“ —',{t:str(o,'Title')||T('Ohne Titel')})+'\n'+v:v,isProt(keep,'Notes'));}
       else if(!STD.includes(k)&&!strEl(keep,k))setStr(keep,k,v,X.kid(s,'Value').attrs.Protected==='True');
       else if(STD.includes(k)&&k!=='Password'&&!str(keep,k)&&v)setStr(keep,k,v,isProt(keep,k));}
     const names=X.kids(keep,'Binary').map(b=>X.text(X.kid(b,'Key')));
@@ -48,61 +48,61 @@ function mergeDuplicateGroup(list){const keep=list[0];const H=X.ensure(keep,'His
   const max=parseInt(X.text(X.kid(meta(),'HistoryMaxItems'))||'10',10);if(max>=0)while(X.kids(H,'Entry').length>max)X.remove(X.kids(H,'Entry')[0]);
   touch(keep);return keep;}
 function dupDialog(){const groups=findDuplicates();const dlg=$('dlg');
-  if(!groups.length){toast('Keine doppelten Einträge gefunden');return;}
-  dlg.innerHTML=`<form class="dlg" id="dupForm"><header>Doppelte Einträge zusammenführen</header><div class="body">
-    <p class="note" style="margin-top:2px">Einträge mit gleicher Website und gleichem Benutzernamen. Der zuletzt geänderte bleibt erhalten. Die anderen wandern in den Papierkorb, ihre Passwörter in den Verlauf, eigene Felder, Anhänge, Notizen und Tags werden übernommen.</p>
-    ${groups.map((g,i)=>`<label class="dupg"><input type="checkbox" data-d="${i}" checked><div><b>${esc(str(g[0],'Title')||'Ohne Titel')}</b> <span class="muted">${esc(str(g[0],'UserName'))}</span>
-      <div class="dupl">${g.map((e,j)=>`<span class="${j?'':'keep'}">${j?'':'✓ '}${esc(str(e,'Title')||'Ohne Titel')} – ${esc(groupPath(e))} – ${fmtDate(getTime(e,'LastModificationTime'))}${str(e,'Password')!==str(g[0],'Password')?' – <i>anderes Passwort</i>':''}</span>`).join('')}</div></div></label>`).join('')}
-  </div><footer><button type="button" class="btn" id="dupC">Abbrechen</button><button class="btn primary" id="dupGo">${groups.length} ${groups.length===1?'Gruppe':'Gruppen'} zusammenführen</button></footer></form>`;
-  const upd=()=>{const n=dlg.querySelectorAll('[data-d]:checked').length;$('dupGo').textContent=`${n} ${n===1?'Gruppe':'Gruppen'} zusammenführen`;$('dupGo').disabled=!n;};
+  if(!groups.length){toast(T('Keine doppelten Einträge gefunden'));return;}
+  dlg.innerHTML=`<form class="dlg" id="dupForm"><header>${T('Doppelte Einträge zusammenführen')}</header><div class="body">
+    <p class="note" style="margin-top:2px">${T('Einträge mit gleicher Website und gleichem Benutzernamen. Der zuletzt geänderte bleibt erhalten. Die anderen wandern in den Papierkorb, ihre Passwörter in den Verlauf, eigene Felder, Anhänge, Notizen und Tags werden übernommen.')}</p>
+    ${groups.map((g,i)=>`<label class="dupg"><input type="checkbox" data-d="${i}" checked><div><b>${esc(str(g[0],'Title')||T('Ohne Titel'))}</b> <span class="muted">${esc(str(g[0],'UserName'))}</span>
+      <div class="dupl">${g.map((e,j)=>`<span class="${j?'':'keep'}">${j?'':'✓ '}${esc(str(e,'Title')||T('Ohne Titel'))} – ${esc(groupPath(e))} – ${fmtDate(getTime(e,'LastModificationTime'))}${str(e,'Password')!==str(g[0],'Password')?' – <i>'+T('anderes Passwort')+'</i>':''}</span>`).join('')}</div></div></label>`).join('')}
+  </div><footer><button type="button" class="btn" id="dupC">${T('Abbrechen')}</button><button class="btn primary" id="dupGo">${T(groups.length===1?'{n} Gruppe zusammenführen':'{n} Gruppen zusammenführen',{n:groups.length})}</button></footer></form>`;
+  const upd=()=>{const n=dlg.querySelectorAll('[data-d]:checked').length;$('dupGo').textContent=T(n===1?'{n} Gruppe zusammenführen':'{n} Gruppen zusammenführen',{n});$('dupGo').disabled=!n;};
   dlg.querySelectorAll('[data-d]').forEach(c=>c.onchange=upd);$('dupC').onclick=()=>dlg.close();
   $('dupForm').onsubmit=ev=>{ev.preventDefault();const sel=[...dlg.querySelectorAll('[data-d]:checked')].map(c=>groups[+c.dataset.d]);if(!sel.length)return;
-    checkpoint('Duplikate zusammenführen');let n=0;for(const g of sel){mergeDuplicateGroup(g);n+=g.length-1;}
-    markDirty();dlg.close();render();undoToast(`${n} ${n===1?'Duplikat':'Duplikate'} zusammengeführt`);};
+    checkpoint(T('Duplikate zusammenführen'));let n=0;for(const g of sel){mergeDuplicateGroup(g);n+=g.length-1;}
+    markDirty();dlg.close();render();undoToast(T(n===1?'{n} Duplikat zusammengeführt':'{n} Duplikate zusammengeführt',{n}));};
   dlg.showModal();}
 // ---- Drucken ----
 function printHtml(html){const p=$('printArea');p.innerHTML=html;document.body.classList.add('printing');
   const done=()=>{document.body.classList.remove('printing');p.innerHTML='';removeEventListener('afterprint',done);};addEventListener('afterprint',done);
   setTimeout(()=>{window.print();setTimeout(()=>{if(!matchMedia('print').matches)done();},1500);},60);}
 function sheetDialog(){const dlg=$('dlg');
-  dlg.innerHTML=`<form class="dlg" id="shForm"><header>Notfallblatt drucken</header><div class="body">
-    <p style="margin-top:4px">Ein Blatt Papier mit allem, was eine Vertrauensperson im Ernstfall braucht, um an deine Passwörter zu kommen. Das Master-Passwort trägst du <b>von Hand</b> ein – es wird nie gedruckt.</p>
-    <label class="f" for="shWho">Erstellt für <span class="muted">(optional)</span></label><input class="input" id="shWho" placeholder="z. B. Ehepartner, Geschäftspartner, Notar">
-    <label class="f" for="shWhere">Wo liegt die Datei? <span class="muted">(optional, sonst Freifeld)</span></label><input class="input" id="shWhere" placeholder="z. B. iCloud Drive › Tresor, USB-Stick im Safe">
-    <p class="note warnbox">Bewahre das ausgefüllte Blatt getrennt von deinen Geräten auf, z. B. im Safe oder Bankschließfach.</p></div>
-    <footer><button type="button" class="btn" id="shC">Abbrechen</button><button class="btn primary">Drucken</button></footer></form>`;
+  dlg.innerHTML=`<form class="dlg" id="shForm"><header>${T('Notfallblatt drucken')}</header><div class="body">
+    <p style="margin-top:4px">${T('Ein Blatt Papier mit allem, was eine Vertrauensperson im Ernstfall braucht, um an deine Passwörter zu kommen. Das Master-Passwort trägst du <b>von Hand</b> ein – es wird nie gedruckt.')}</p>
+    <label class="f" for="shWho">${T('Erstellt für')} <span class="muted">${T('(optional)')}</span></label><input class="input" id="shWho" placeholder="${T('z. B. Ehepartner, Geschäftspartner, Notar')}">
+    <label class="f" for="shWhere">${T('Wo liegt die Datei?')} <span class="muted">${T('(optional, sonst Freifeld)')}</span></label><input class="input" id="shWhere" placeholder="${T('z. B. iCloud Drive › Tresor, USB-Stick im Safe')}">
+    <p class="note warnbox">${T('Bewahre das ausgefüllte Blatt getrennt von deinen Geräten auf, z. B. im Safe oder Bankschließfach.')}</p></div>
+    <footer><button type="button" class="btn" id="shC">${T('Abbrechen')}</button><button class="btn primary">${T('Drucken')}</button></footer></form>`;
   $('shC').onclick=()=>dlg.close();
   $('shForm').onsubmit=ev=>{ev.preventDefault();const who=$('shWho').value.trim(),where=$('shWhere').value.trim();dlg.close();
     const kdf=hex(S.db.kdf.$UUID.v);const lines=n=>'<div class="pline"></div>'.repeat(n);
-    printHtml(`<div class="psheet"><div class="phead"><div><div class="pkick">Notfallblatt</div><h1>${esc(X.text(X.kid(meta(),'DatabaseName'))||S.fileName)}</h1></div><div class="pdate">Erstellt am ${new Date().toLocaleDateString('de-DE')}${who?`<br>für ${esc(who)}`:''}</div></div>
-      <p>Dieses Blatt beschreibt, wie du an die Passwortdatenbank kommst, falls ich dazu selbst nicht in der Lage bin. Die Datenbank ist verschlüsselt – ohne das Master-Passwort unten ist sie nicht lesbar.</p>
-      <h2>1 · Die Datei</h2><table class="ptbl"><tr><th>Dateiname</th><td>${esc(S.fileName)}</td></tr><tr><th>Speicherort</th><td>${where?esc(where):lines(2)}</td></tr><tr><th>Format</th><td>KeePass KDBX ${S.db.major}.${S.db.minor}</td></tr></table>
-      <h2>2 · Master-Passwort</h2><div class="pbox">${lines(3)}</div><p class="psmall">Genau so abschreiben, wie es eingegeben wird – Groß- und Kleinschreibung, Leer- und Sonderzeichen zählen.</p>
-      <h2>3 · Schlüsseldatei</h2>${S.keyFile?`<p>Zum Öffnen wird zusätzlich die Schlüsseldatei <b>${esc(S.keyFileName||'(Name unbekannt)')}</b> benötigt. Sie liegt hier:</p>${lines(2)}`:'<p>Wird nicht benötigt.</p>'}
-      <h2>4 · So öffnest du die Datenbank</h2><ol><li>Die Datei vom Speicherort auf einen Computer, ein Tablet oder Smartphone holen.</li><li>Mit einem KeePass-kompatiblen Programm öffnen: <b>KeePassXC</b> (Windows, Mac, Linux – keepassxc.org), <b>Strongbox</b> (iPhone, iPad, Mac), <b>KeePassDX</b> (Android) oder <b>Tresor</b>.</li><li>Das Master-Passwort von oben eingeben${S.keyFile?' und die Schlüsseldatei auswählen':''}.</li></ol>
-      <h2>Notizen</h2>${lines(4)}<div class="pfoot">Vertraulich – sicher aufbewahren · Verschlüsselung: ${S.db.cipher===CIPHER_CHACHA?'ChaCha20':'AES-256'}, ${kdf===KDF_ARGON2D?'Argon2d':kdf===KDF_ARGON2ID?'Argon2id':'AES-KDF'}</div></div>`);};
+    printHtml(`<div class="psheet"><div class="phead"><div><div class="pkick">${T('Notfallblatt')}</div><h1>${esc(X.text(X.kid(meta(),'DatabaseName'))||S.fileName)}</h1></div><div class="pdate">${T('Erstellt am {d}',{d:new Date().toLocaleDateString(LOC)})}${who?'<br>'+T('für {w}',{w:esc(who)}):''}</div></div>
+      <p>${T('Dieses Blatt beschreibt, wie du an die Passwortdatenbank kommst, falls ich dazu selbst nicht in der Lage bin. Die Datenbank ist verschlüsselt – ohne das Master-Passwort unten ist sie nicht lesbar.')}</p>
+      <h2>${T('1 · Die Datei')}</h2><table class="ptbl"><tr><th>${T('Dateiname')}</th><td>${esc(S.fileName)}</td></tr><tr><th>${T('Speicherort')}</th><td>${where?esc(where):lines(2)}</td></tr><tr><th>${T('Format')}</th><td>KeePass KDBX ${S.db.major}.${S.db.minor}</td></tr></table>
+      <h2>${T('2 · Master-Passwort')}</h2><div class="pbox">${lines(3)}</div><p class="psmall">${T('Genau so abschreiben, wie es eingegeben wird – Groß- und Kleinschreibung, Leer- und Sonderzeichen zählen.')}</p>
+      <h2>${T('3 · Schlüsseldatei')}</h2>${S.keyFile?`<p>${T('Zum Öffnen wird zusätzlich die Schlüsseldatei <b>{f}</b> benötigt. Sie liegt hier:',{f:esc(S.keyFileName||T('(Name unbekannt)'))})}</p>${lines(2)}`:`<p>${T('Wird nicht benötigt.')}</p>`}
+      <h2>${T('4 · So öffnest du die Datenbank')}</h2><ol><li>${T('Die Datei vom Speicherort auf einen Computer, ein Tablet oder Smartphone holen.')}</li><li>${T('Mit einem KeePass-kompatiblen Programm öffnen: <b>KeePassXC</b> (Windows, Mac, Linux – keepassxc.org), <b>Strongbox</b> (iPhone, iPad, Mac), <b>KeePassDX</b> (Android) oder <b>Tresor</b>.')}</li><li>${S.keyFile?T('Das Master-Passwort von oben eingeben und die Schlüsseldatei auswählen.'):T('Das Master-Passwort von oben eingeben.')}</li></ol>
+      <h2>${T('Notizen')}</h2>${lines(4)}<div class="pfoot">${T('Vertraulich – sicher aufbewahren')} · ${T('Verschlüsselung')}: ${S.db.cipher===CIPHER_CHACHA?'ChaCha20':'AES-256'}, ${kdf===KDF_ARGON2D?'Argon2d':kdf===KDF_ARGON2ID?'Argon2id':'AES-KDF'}</div></div>`);};
   dlg.showModal();}
 const isWifi=e=>/\b(wlan|wifi|wi-fi|wpa)\b/i.test([str(e,'Title'),tagsOf(e).join(' '),str(e,'URL')].join(' '))||!!strEl(e,'SSID');
 function entryPrintHtml(e,o){const pw=str(e,'Password');const rows=[];
-  if(o.qr)rows.push(['Netzwerk',`<span class="pmono">${esc(o.ssid)}</span>`]);
-  if(str(e,'UserName'))rows.push(['Benutzername',`<span class="pmono">${esc(str(e,'UserName'))}</span>`]);
-  if(o.pw&&pw)rows.push(['Passwort',`<div class="ptiles">${[...pw].map((c,i)=>`<span><b>${c===' '?'␣':esc(c)}</b><small>${i+1}</small></span>`).join('')}</div>`]);
-  if(str(e,'URL'))rows.push(['Adresse',esc(str(e,'URL'))]);
-  if(o.notes&&str(e,'Notes'))rows.push(['Notizen',`<div style="white-space:pre-wrap">${esc(str(e,'Notes'))}</div>`]);
-  let qr='';if(o.qr){try{qr=`<div class="pqr">${qrSvg(wifiString(o.ssid,pw,o.sec,o.hidden),190)}<div>Mit der Handykamera scannen, um sich mit „${esc(o.ssid)}“ zu verbinden.</div></div>`;}catch(err){qr=`<div class="pqr">${esc(err.message)}</div>`;}}
-  return `<div class="pcard"><div class="pchead"><h1>${esc(o.title||str(e,'Title')||'Zugangsdaten')}</h1>${o.qr?`<div class="pnet">WLAN: <b>${esc(o.ssid)}</b></div>`:''}</div><div class="pcbody"><table class="ptbl">${rows.map(r=>`<tr><th>${r[0]}</th><td>${r[1]}</td></tr>`).join('')}</table>${qr}</div>
-    <div class="pfoot">Stand ${new Date().toLocaleDateString('de-DE')} · Vertraulich – nicht offen liegen lassen</div></div>`;}
+  if(o.qr)rows.push([T('Netzwerk'),`<span class="pmono">${esc(o.ssid)}</span>`]);
+  if(str(e,'UserName'))rows.push([T('Benutzername'),`<span class="pmono">${esc(str(e,'UserName'))}</span>`]);
+  if(o.pw&&pw)rows.push([T('Passwort'),`<div class="ptiles">${[...pw].map((c,i)=>`<span><b>${c===' '?'␣':esc(c)}</b><small>${i+1}</small></span>`).join('')}</div>`]);
+  if(str(e,'URL'))rows.push([T('Adresse'),esc(str(e,'URL'))]);
+  if(o.notes&&str(e,'Notes'))rows.push([T('Notizen'),`<div style="white-space:pre-wrap">${esc(str(e,'Notes'))}</div>`]);
+  let qr='';if(o.qr){try{qr=`<div class="pqr">${qrSvg(wifiString(o.ssid,pw,o.sec,o.hidden),190)}<div>${T('Mit der Handykamera scannen, um sich mit „{s}“ zu verbinden.',{s:esc(o.ssid)})}</div></div>`;}catch(err){qr=`<div class="pqr">${esc(err.message)}</div>`;}}
+  return `<div class="pcard"><div class="pchead"><h1>${esc(o.title||str(e,'Title')||T('Zugangsdaten'))}</h1>${o.qr?`<div class="pnet">${T('WLAN')}: <b>${esc(o.ssid)}</b></div>`:''}</div><div class="pcbody"><table class="ptbl">${rows.map(r=>`<tr><th>${r[0]}</th><td>${r[1]}</td></tr>`).join('')}</table>${qr}</div>
+    <div class="pfoot">${T('Stand {d}',{d:new Date().toLocaleDateString(LOC)})} · ${T('Vertraulich – nicht offen liegen lassen')}</div></div>`;}
 function printEntryDialog(e){if(!e)return;const dlg=$('dlg');const wifi=isWifi(e);const ssid0=str(e,'SSID')||str(e,'Title');
-  dlg.innerHTML=`<form class="dlg" id="prForm"><header>Eintrag drucken</header><div class="body">
-    <label class="f" for="prT">Überschrift</label><input class="input" id="prT" value="${esc(str(e,'Title'))}">
-    <label class="check"><input type="checkbox" id="prPw" checked> Passwort drucken</label>
-    ${str(e,'Notes')?'<label class="check"><input type="checkbox" id="prN"> Notizen drucken</label>':''}
-    <label class="check"><input type="checkbox" id="prQ"${wifi?' checked':''}> WLAN-QR-Code zum Verbinden</label>
-    <div id="prQo" class="${wifi?'':'hidden'}"><div class="two"><div><label class="f" for="prS">Netzwerkname (SSID)</label><input class="input" id="prS" value="${esc(ssid0)}"></div>
-      <div><label class="f" for="prE">Verschlüsselung</label><select class="input" id="prE"><option value="WPA">WPA2 / WPA3</option><option value="WEP">WEP</option><option value="nopass">Offen</option></select></div></div>
-      <label class="check"><input type="checkbox" id="prH"> Verstecktes Netzwerk</label></div>
+  dlg.innerHTML=`<form class="dlg" id="prForm"><header>${T('Eintrag drucken')}</header><div class="body">
+    <label class="f" for="prT">${T('Überschrift')}</label><input class="input" id="prT" value="${esc(str(e,'Title'))}">
+    <label class="check"><input type="checkbox" id="prPw" checked> ${T('Passwort drucken')}</label>
+    ${str(e,'Notes')?`<label class="check"><input type="checkbox" id="prN"> ${T('Notizen drucken')}</label>`:''}
+    <label class="check"><input type="checkbox" id="prQ"${wifi?' checked':''}> ${T('WLAN-QR-Code zum Verbinden')}</label>
+    <div id="prQo" class="${wifi?'':'hidden'}"><div class="two"><div><label class="f" for="prS">${T('Netzwerkname (SSID)')}</label><input class="input" id="prS" value="${esc(ssid0)}"></div>
+      <div><label class="f" for="prE">${T('Verschlüsselung')}</label><select class="input" id="prE"><option value="WPA">WPA2 / WPA3</option><option value="WEP">WEP</option><option value="nopass">${T('Offen')}</option></select></div></div>
+      <label class="check"><input type="checkbox" id="prH"> ${T('Verstecktes Netzwerk')}</label></div>
     <div class="pprev"><div id="prPrev"></div></div></div>
-    <footer><button type="button" class="btn" id="prC">Abbrechen</button><button class="btn primary">Drucken</button></footer></form>`;
+    <footer><button type="button" class="btn" id="prC">${T('Abbrechen')}</button><button class="btn primary">${T('Drucken')}</button></footer></form>`;
   const opts=()=>({title:$('prT').value,pw:$('prPw').checked,notes:$('prN')?$('prN').checked:false,qr:$('prQ').checked,ssid:$('prS').value||str(e,'Title'),sec:$('prE').value,hidden:$('prH').checked});
   const prev=()=>{$('prQo').classList.toggle('hidden',!$('prQ').checked);$('prPrev').innerHTML=entryPrintHtml(e,opts());};
   dlg.querySelector('.body').addEventListener('input',prev);dlg.querySelector('.body').addEventListener('change',prev);prev();

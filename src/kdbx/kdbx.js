@@ -18,7 +18,7 @@ function xmlParse(s){
     let j=lt+1;while(j<s.length&&!/[\s/>]/.test(s[j]))j++;
     const el={name:s.slice(lt+1,j),attrs:{},children:[],parent:top};
     const re=/\s*([^\s=/>]+)\s*=\s*("([^"]*)"|'([^']*)')|\s*(\/?)>/y;re.lastIndex=j;
-    for(;;){const m=re.exec(s);if(!m)throw new Error('XML-Fehler bei '+j);if(m[1]){el.attrs[m[1]]=ent(m[3]!==undefined?m[3]:m[4]);}else{top.children.push(el);i=re.lastIndex;if(!m[5])stack.push(el);break;}}
+    for(;;){const m=re.exec(s);if(!m)throw new Error(T('XML-Fehler bei {p}',{p:j}));if(m[1]){el.attrs[m[1]]=ent(m[3]!==undefined?m[3]:m[4]);}else{top.children.push(el);i=re.lastIndex;if(!m[5])stack.push(el);break;}}
   }
   const clean=n=>{if(n.children.some(c=>typeof c!=='string'))n.children=n.children.filter(c=>typeof c!=='string'||c.trim());for(const c of n.children)if(typeof c!=='string')clean(c);};
   clean(root);return root.children.find(c=>typeof c!=='string');
@@ -81,21 +81,21 @@ async function runKdf(kdf,composite,onProgress){
   if(uuid===KDF_ARGON2D||uuid===KDF_ARGON2ID){
     const params={password:composite,salt:kdf.S.v,t:kdf.I.v,m:Math.floor(kdf.M.v/1024),p:kdf.P.v,len:32,type:uuid===KDF_ARGON2D?0:2,version:kdf.V?kdf.V.v:0x13};
     return argon2Run(params,onProgress);}
-  throw new Error('Unbekannte Schlüsselableitung');}
+  throw new Error(T('Unbekannte Schlüsselableitung'));}
 
 function blockHmacKey(hk,idx){return sha512(concat(u64le(idx),hk));}
 
 // ===== Lesen =====
 async function kdbxOpen(file,password,keyFile,onProgress,compositeIn){
   const dv=new DataView(file.buffer,file.byteOffset,file.length);
-  if(file.length<12||dv.getUint32(0,true)!==SIG1||dv.getUint32(4,true)!==SIG2)throw new Error('Das ist keine KeePass-Datenbank (.kdbx).');
+  if(file.length<12||dv.getUint32(0,true)!==SIG1||dv.getUint32(4,true)!==SIG2)throw new Error(T('Das ist keine KeePass-Datenbank (.kdbx).'));
   const minor=dv.getUint16(8,true),major=dv.getUint16(10,true);
-  if(major<3||major>4)throw new Error(`KDBX-Version ${major}.${minor} wird nicht unterstützt.`);
+  if(major<3||major>4)throw new Error(T('KDBX-Version {v} wird nicht unterstützt.',{v:major+'.'+minor}));
   let p=12;const h={};const v4=major===4;
   for(;;){const id=file[p];const sz=v4?dv.getUint32(p+1,true):dv.getUint16(p+1,true);p+=v4?5:3;const d=file.slice(p,p+sz);p+=sz;if(id===0)break;h[id]=d;}
   const headerBytes=file.slice(0,p);
-  const cipher=hex(h[2]);if(cipher===CIPHER_TWOFISH)throw new Error('Twofish-verschlüsselte Datenbanken werden nicht unterstützt. Bitte in KeePass auf AES oder ChaCha20 umstellen.');
-  if(cipher!==CIPHER_AES&&cipher!==CIPHER_CHACHA)throw new Error('Unbekannte Verschlüsselung.');
+  const cipher=hex(h[2]);if(cipher===CIPHER_TWOFISH)throw new Error(T('Twofish-verschlüsselte Datenbanken werden nicht unterstützt. Bitte in KeePass auf AES oder ChaCha20 umstellen.'));
+  if(cipher!==CIPHER_AES&&cipher!==CIPHER_CHACHA)throw new Error(T('Unbekannte Verschlüsselung.'));
   const compressed=new DataView(h[3].buffer).getUint32(0,true)===1;
   let kdf;
   if(v4)kdf=readVarDict(h[11]);
@@ -105,15 +105,15 @@ async function kdbxOpen(file,password,keyFile,onProgress,compositeIn){
   const db={major,minor,cipher,compressed,kdf,kdfRaw:h[11],publicCustom:h[12],transformed,composite};
   const masterSeed=h[4];const encKey=await sha256(concat(masterSeed,transformed));
   let plain,innerId,innerKey;
-  const wrong=()=>new Error('Falsches Master-Passwort oder falsche Schlüsseldatei.');
+  const wrong=()=>new Error(T('Falsches Master-Passwort oder falsche Schlüsseldatei.'));
   if(v4){
     const hk=await sha512(concat(masterSeed,transformed,new Uint8Array([1])));
     const storedHash=file.slice(p,p+32),storedHmac=file.slice(p+32,p+64);p+=64;
-    if(!eqBytes(await sha256(headerBytes),storedHash))throw new Error('Der Dateikopf ist beschädigt.');
+    if(!eqBytes(await sha256(headerBytes),storedHash))throw new Error(T('Der Dateikopf ist beschädigt.'));
     if(!eqBytes(await hmac256(await sha512(concat(new Uint8Array(8).fill(255),hk)),headerBytes),storedHmac))throw wrong();
     const blocks=[];let i=0;
     for(;;){const mac=file.slice(p,p+32);const sz=dv.getUint32(p+32,true);const data=file.slice(p+36,p+36+sz);
-      const calc=await hmac256(await blockHmacKey(hk,i),concat(u64le(i),u32le(sz),data));if(!eqBytes(calc,mac))throw new Error('Datenblock beschädigt.');
+      const calc=await hmac256(await blockHmacKey(hk,i),concat(u64le(i),u32le(sz),data));if(!eqBytes(calc,mac))throw new Error(T('Datenblock beschädigt.'));
       p+=36+sz;i++;if(sz===0)break;blocks.push(data);}
     let ct=concat(...blocks);
     plain=cipher===CIPHER_AES?await aesCbc(encKey,h[7],ct,false):makeStream('chacha',encKey,h[7]).xor(ct);
@@ -129,7 +129,7 @@ async function kdbxOpen(file,password,keyFile,onProgress,compositeIn){
     if(!eqBytes(pt.slice(0,32),h[9]))throw wrong();
     const bv=new DataView(pt.buffer,pt.byteOffset,pt.length);let q=32;const blocks=[];
     for(;;){const sz=bv.getUint32(q+36,true);const hs=pt.slice(q+4,q+36);const d=pt.slice(q+40,q+40+sz);q+=40+sz;if(sz===0)break;
-      if(!eqBytes(await sha256(d),hs))throw new Error('Datenblock beschädigt.');blocks.push(d);}
+      if(!eqBytes(await sha256(d),hs))throw new Error(T('Datenblock beschädigt.'));blocks.push(d);}
     plain=concat(...blocks);if(compressed)plain=await gunzip(plain);
     innerId=new DataView(h[10].buffer).getUint32(0,true);innerKey=h[8];
   }
@@ -144,7 +144,7 @@ async function innerStream(id,key){
   if(id===2)return makeStream('salsa',await sha256(key),SALSA_IV);
   if(id===3){const h=await sha512(key);return makeStream('chacha',h.slice(0,32),h.slice(32,44));}
   if(id===0)return {xor:d=>d};
-  throw new Error('Unbekannter innerer Stromschlüssel');}
+  throw new Error(T('Unbekannter innerer Stromschlüssel'));}
 
 // ===== Schreiben =====
 async function kdbxSave(db){
@@ -203,7 +203,7 @@ function timeStr(db,date){date=date||new Date();
   return date.toISOString().replace(/\.\d{3}Z$/,'Z');}
 function parseTime(db,s){if(!s)return null;if(/^\d{4}-/.test(s))return new Date(s);
   try{const b=unb64(s);if(b.length!==8)return null;const dv=new DataView(b.buffer);const secs=dv.getUint32(0,true)+dv.getUint32(4,true)*4294967296;return new Date((secs-62135596800)*1000);}catch(e){return null;}}
-function timesEl(db){const t=timeStr(db);const T=X.el('Times');for(const [k,v] of [['CreationTime',t],['LastModificationTime',t],['LastAccessTime',t],['ExpiryTime',t],['Expires','False'],['UsageCount','0'],['LocationChanged',t]])X.append(T,X.el(k,v));return T;}
+function timesEl(db){const t=timeStr(db);const Tm=X.el('Times');for(const [k,v] of [['CreationTime',t],['LastModificationTime',t],['LastAccessTime',t],['ExpiryTime',t],['Expires','False'],['UsageCount','0'],['LocationChanged',t]])X.append(Tm,X.el(k,v));return Tm;}
 async function kdbxCreate(name,password,keyFile,onProgress,kdfIn){
   const db={major:4,minor:0,cipher:CIPHER_AES,compressed:true,binaries:[],
     kdf:kdfIn||{$UUID:{t:0x42,v:unhex(KDF_ARGON2D)},S:{t:0x42,v:rnd(32)},P:{t:0x04,v:2},M:{t:0x05,v:64*1024*1024},I:{t:0x05,v:8},V:{t:0x04,v:0x13}}};

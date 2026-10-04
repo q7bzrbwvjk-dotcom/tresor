@@ -30,9 +30,9 @@ function csvDetect(header){const h=header.map(x=>x.trim().toLowerCase());const h
 function csvRecords(rows){const header=rows[0].map(x=>x.trim().toLowerCase());const col={};
   for(const k in CSV_ALIASES){const i=header.findIndex(h=>CSV_ALIASES[k].includes(h));if(i>=0)col[k]=i;}
   const out=[];for(const r of rows.slice(1)){const g=k=>col[k]!==undefined?(r[col[k]]||'').trim():'';
-    if(g('type')&&!['login','1',''].includes(g('type').toLowerCase())&&!g('pass')&&!g('user')){out.push({title:g('title')||'Notiz',user:'',pass:'',url:'',notes:[g('notes'),g('fields')].filter(Boolean).join('\n'),totp:'',group:g('group'),tags:g('tags')});continue;}
+    if(g('type')&&!['login','1',''].includes(g('type').toLowerCase())&&!g('pass')&&!g('user')){out.push({title:g('title')||T('Notiz'),user:'',pass:'',url:'',notes:[g('notes'),g('fields')].filter(Boolean).join('\n'),totp:'',group:g('group'),tags:g('tags')});continue;}
     let title=g('title'),url=g('url');if(!title&&url){try{title=new URL(/^[a-z]+:/i.test(url)?url:'https://'+url).hostname.replace(/^www\./,'');}catch(e){title=url;}}
-    const rec={title:title||'Ohne Titel',user:g('user'),pass:r[col.pass]??'',url,notes:[g('notes'),g('fields')].filter(Boolean).join('\n'),totp:g('totp'),group:g('group'),tags:g('tags')};
+    const rec={title:title||T('Ohne Titel'),user:g('user'),pass:r[col.pass]??'',url,notes:[g('notes'),g('fields')].filter(Boolean).join('\n'),totp:g('totp'),group:g('group'),tags:g('tags')};
     if(rec.user||rec.pass||rec.url||rec.notes||g('title'))out.push(rec);}
   return {records:out,mapped:Object.keys(col)};}
 function csvCell(v){v=String(v??'');return /[",\n\r]/.test(v)||/^[=+\-@]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}

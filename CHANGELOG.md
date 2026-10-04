@@ -12,3 +12,4 @@ All notable changes are documented here. Versions follow [Semantic Versioning](h
 - Command palette, keyboard navigation, focus mode, light and dark design, mobile layout
 - CSV import from common password managers, CSV export, group export as separate encrypted database
 - Printable Wi-Fi cards with QR code, entry print view, emergency sheet
+- English and German user interface (follows the browser language, switchable on the start screen and in Settings)

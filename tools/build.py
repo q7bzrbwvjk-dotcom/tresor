@@ -14,7 +14,7 @@ VERSION = (ROOT / "VERSION").read_text().strip()
 REPO_URL = "https://github.com/q7bzrbwvjk-dotcom/tresor"
 
 JS_ORDER = [
-    "crypto/cryptofb.js", "crypto/crypto.js", "crypto/argon2.js", "kdbx/kdbx.js", "crypto/otp.js",
+    "ui/i18n.js", "crypto/cryptofb.js", "crypto/crypto.js", "crypto/argon2.js", "kdbx/kdbx.js", "crypto/otp.js",
     "ui/icons.js", "ui/words.js", "kdbx/merge.js", "kdbx/csv.js", "crypto/qr.js",
     "ui/app.js", "ui/app2.js", "ui/app3.js", "ui/app4.js", "ui/app5.js", "ui/app6.js", "ui/app7.js",
 ]

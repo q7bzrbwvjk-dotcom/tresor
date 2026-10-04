@@ -66,9 +66,9 @@ const JSC=(()=>{
   function cbc(key,iv,data,encrypt){const k=expand(key);const s=new Uint32Array(4),prev=new Uint32Array(4),tmp=new Uint32Array(4);const ivv=new DataView(iv.buffer,iv.byteOffset,16);for(let i=0;i<4;i++)prev[i]=ivv.getUint32(i*4);
     if(encrypt){const p=16-data.length%16;const m=new Uint8Array(data.length+p);m.set(data);m.fill(p,data.length);const dv=new DataView(m.buffer);
       for(let off=0;off<m.length;off+=16){for(let i=0;i<4;i++)s[i]=dv.getUint32(off+i*4)^prev[i];encBlock(k,s);for(let i=0;i<4;i++){dv.setUint32(off+i*4,s[i]);prev[i]=s[i];}}return m;}
-    if(data.length%16||!data.length)throw new Error('Ungültige Datenlänge');const m=new Uint8Array(data);const dv=new DataView(m.buffer);
+    if(data.length%16||!data.length)throw new Error(T('Ungültige Datenlänge'));const m=new Uint8Array(data);const dv=new DataView(m.buffer);
     for(let off=0;off<m.length;off+=16){for(let i=0;i<4;i++){s[i]=dv.getUint32(off+i*4);tmp[i]=s[i];}decBlock(k,s);for(let i=0;i<4;i++){dv.setUint32(off+i*4,s[i]^prev[i]);prev[i]=tmp[i];}}
-    const p=m[m.length-1];if(p<1||p>16)throw new Error('Entschlüsselung fehlgeschlagen');for(let i=m.length-p;i<m.length;i++)if(m[i]!==p)throw new Error('Entschlüsselung fehlgeschlagen');return m.slice(0,m.length-p);}
+    const p=m[m.length-1];if(p<1||p>16)throw new Error(T('Entschlüsselung fehlgeschlagen'));for(let i=m.length-p;i<m.length;i++)if(m[i]!==p)throw new Error(T('Entschlüsselung fehlgeschlagen'));return m.slice(0,m.length-p);}
   async function aesKdf(seed,data,rounds,onProgress){const k=expand(seed);const out=new Uint8Array(32);const ov=new DataView(out.buffer);const dv=new DataView(data.buffer,data.byteOffset,32);
     for(let half=0;half<2;half++){const s=new Uint32Array(4);for(let i=0;i<4;i++)s[i]=dv.getUint32(half*16+i*4);let done=0;
       while(done<rounds){const n=Math.min(200000,rounds-done);for(let i=0;i<n;i++)encBlock(k,s);done+=n;if(onProgress)onProgress((half*rounds+done)/(2*rounds));await new Promise(r=>setTimeout(r,0));}

@@ -284,3 +284,4 @@ dialog[open]{animation:dlgIn .2s cubic-bezier(.2,.8,.2,1)}
 .tplprev .tplchip{align-self:flex-start}
 .prevf{display:flex;flex-wrap:wrap;gap:4px}.prevf span{background:var(--sunk);border-radius:6px;padding:2px 8px;font-size:12.5px}
 @media (max-width:640px){.tef{grid-template-columns:1fr 1fr auto auto auto}}
+.langsw{display:flex;align-items:center;gap:8px;margin-top:28px;color:var(--steel);font-size:13px}.langsw .i{width:16px;height:16px}.langsw select{width:auto;min-height:0;padding:4px 8px;font-size:13px}

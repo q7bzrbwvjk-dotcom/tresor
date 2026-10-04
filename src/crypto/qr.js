@@ -5,11 +5,11 @@
 function qrEncode(text){
   const data=enc.encode(text);
   // [Datenwörter gesamt, EC je Block, Blöcke [anzahl, datenwörter]...]
-  const T=[null,[16,10,[[1,16]]],[28,16,[[1,28]]],[44,26,[[1,44]]],[64,18,[[2,32]]],[86,24,[[2,43]]],[108,16,[[4,27]]],[124,18,[[4,31]]],[154,22,[[2,38],[2,39]]],[182,22,[[3,36],[2,37]]],[216,26,[[4,43],[1,44]]]];
+  const QT=[null,[16,10,[[1,16]]],[28,16,[[1,28]]],[44,26,[[1,44]]],[64,18,[[2,32]]],[86,24,[[2,43]]],[108,16,[[4,27]]],[124,18,[[4,31]]],[154,22,[[2,38],[2,39]]],[182,22,[[3,36],[2,37]]],[216,26,[[4,43],[1,44]]]];
   const ALIGN=[null,[],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50]];
-  let ver=0;for(let v=1;v<=10;v++){const cap=T[v][0]-(v<10?2:3);if(data.length<=cap){ver=v;break;}}
-  if(!ver)throw new Error('Text zu lang für einen QR-Code');
-  const [dcTotal,ecLen,blocks]=T[ver];
+  let ver=0;for(let v=1;v<=10;v++){const cap=QT[v][0]-(v<10?2:3);if(data.length<=cap){ver=v;break;}}
+  if(!ver)throw new Error(T('Text zu lang für einen QR-Code'));
+  const [dcTotal,ecLen,blocks]=QT[ver];
   const bits=[];const put=(v,n)=>{for(let i=n-1;i>=0;i--)bits.push((v>>>i)&1);};
   put(4,4);put(data.length,ver<10?8:16);for(const b of data)put(b,8);
   put(0,Math.min(4,dcTotal*8-bits.length));while(bits.length%8)bits.push(0);

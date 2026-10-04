@@ -1,0 +1,9 @@
+dist/
+tests/out/
+.DS_Store
+*.kdbx
+*.key
+*.keyx
+__pycache__/
+node_modules/
+PUBLISHING.md

@@ -4,7 +4,8 @@
 // ===================== Runde 7: Gruppenverwaltung =====================
 const isUnderG=(g,anc)=>{for(let p=g;p;p=p.parent)if(p===anc)return true;return false;};
 function groupStats(g){let e=0,s=0;(function w(x){e+=X.kids(x,'Entry').length;for(const c of X.kids(x,'Group')){s++;w(c);}})(g);return {e,s};}
-const plural=(n,a,b)=>`${n} ${n===1?a:b}`;
+// Counted nouns: German keeps the capital, English uses lower case ("3 entries").
+const plural=(n,a,b)=>{const w=n===1?a:b;return `${n} ${LANG==='de'?w:w.toLowerCase()}`;};
 // ---- Kontextmenü einer Gruppe ----
 function groupMenu(g,anchor){if(!g)return;const dlg=$('dlg');const root=g===rootGroup(),bin=g===recycleBin(false);const perm=bin||inBin(g)||!binEnabled();const st=groupStats(g);
   const items=[

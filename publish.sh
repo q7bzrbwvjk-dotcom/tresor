@@ -45,7 +45,7 @@ cmd_prepare(){
   [ -d .git ] || git init -q -b main
   git add -A
   git ls-files | grep -qE '\.(kdbx|key|keyx)$' && die "Datenbank- oder Schlüsseldatei im Commit – bitte entfernen"
-  git -c user.name="$AUTHOR" -c user.email="$(noreply)" commit -q -s -m "Tresor $(cat VERSION) – first public release" || echo "  (nichts zu committen)"
+  git -c user.name="$AUTHOR" -c user.email="$(noreply)" commit -q -s -m "Tresor $(cat VERSION)" || echo "  (nichts zu committen)"
   git config user.name "$AUTHOR"; git config user.email "$(noreply)"
   echo "  ✓ Commit als: $AUTHOR <$(noreply)>"
   git --no-pager log --format='  %h %an <%ae> – %s' -3

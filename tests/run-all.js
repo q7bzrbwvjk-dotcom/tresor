@@ -9,7 +9,7 @@ const load = f => fs.readFileSync(path.join(ROOT, 'src', f), 'utf8');
 // Load the non-UI modules into this scope (they are plain browser scripts without exports).
 (0, eval)([ 'ui/i18n.js', 'ui/words.js', 'crypto/cryptofb.js', 'crypto/crypto.js', 'crypto/argon2.js', 'kdbx/kdbx.js', 'kdbx/merge.js', 'kdbx/csv.js', 'crypto/qr.js', 'crypto/otp.js' ].map(load).join('\n')
   + ';globalThis.A=argon2Factory();globalThis.argon2Run=async(p,cb)=>A.argon2({...p,onProgress:cb});'
-  + 'Object.assign(globalThis,{EN,WORDS_EN,JSC,kdbxCreate,kdbxSave,kdbxOpen,mergeDb,X,xmlSerialize,timeStr,parseTime,newUuid,timesEl,writeVarDict,runKdf,compositeKey,unhex,hex,makeStream,csvParse,csvRecords,csvDetect,qrEncode,aesKdf,totpCode,parseOtpString});');
+  + 'Object.assign(globalThis,{EN,WORDS_EN,JSC,kdbxCreate,kdbxSave,kdbxOpen,mergeDb,planMerge,X,xmlSerialize,timeStr,parseTime,newUuid,timesEl,writeVarDict,runKdf,compositeKey,unhex,hex,makeStream,csvParse,csvRecords,csvDetect,qrEncode,aesKdf,totpCode,parseOtpString});');
 
 let pass = 0, fail = 0;
 const ok = (name, cond) => { if (cond) pass++; else { fail++; console.log('  FAIL', name); } };
@@ -87,6 +87,23 @@ const OUT = path.join(__dirname, 'out'); fs.mkdirSync(OUT, { recursive: true });
   const cases = [['folder,favorite,type,name,notes,fields,reprompt,login_uri,login_username,login_password,login_totp\nWork,,login,Example,,,0,https://example.com,alice,"p,w",', 'Bitwarden'],
     ['url,username,password,totp,extra,name,grouping,fav\nhttps://example.com,a,b,,,X,Shop,0', 'LastPass'], ['name,url,username,password,note\n,https://www.example.com/login,alice,p1,', 'Chrome/Brave/Edge']];
   for (const [csv, fmt] of cases) { const rows = csvParse(csv); ok('csv ' + fmt, csvDetect(rows[0]) === fmt && csvRecords(rows).records.length === 1); }
+
+  { // conflict detection and per-entry decisions
+    const val = (e, k) => X.text(X.kid(X.kids(e, 'String').find(s => X.text(X.kid(s, 'Key')) === k), 'Value'));
+    const root = db => X.kid(X.kid(db.xml, 'Root'), 'Group');
+    const L = await kdbxCreate('L', 'x', null, null, fast); const e0 = addEntry(L, 'Shared', 'base');
+    X.setText(X.kid(X.kid(e0, 'Times'), 'LastModificationTime'), timeStr(L, new Date('2026-01-01')));
+    const O = await kdbxCreate('O', 'x', null, null, fast); O.xml = X.clone(L.xml, null);
+    const edit = (db, pw, d) => { const e = X.kids(root(db), 'Entry').find(x => val(x, 'Title') === 'Shared'); const h = X.clone(e, null); X.remove(X.kid(h, 'History')); X.append(X.kid(e, 'History'), h);
+      X.setText(X.kid(X.kids(e, 'String').find(s => X.text(X.kid(s, 'Key')) === 'Password'), 'Value'), pw); X.setText(X.kid(X.kid(e, 'Times'), 'LastModificationTime'), timeStr(db, d)); };
+    edit(L, 'local', new Date('2026-02-01')); edit(O, 'other', new Date('2026-03-01'));
+    const plan = planMerge(L, O); ok('plan detects conflict', plan.conflicts.length === 1 && plan.updated.length === 0);
+    const dec = {}; dec[plan.conflicts[0].u] = 'local'; await mergeDb(L, O, { decisions: dec });
+    const cur = X.kids(root(L), 'Entry').find(x => val(x, 'Title') === 'Shared');
+    ok('decision keeps local version', val(cur, 'Password') === 'local');
+    ok('other version kept in history', X.kids(X.kid(cur, 'History'), 'Entry').some(h => val(h, 'Password') === 'other'));
+    ok('resolved conflict does not reappear', planMerge(L, O).conflicts.length === 0);
+  }
 
   console.log('Translations');
   // Every German text passed to T() in the sources (and every static text in body.html) needs an English entry in EN.

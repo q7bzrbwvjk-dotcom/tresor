@@ -11,7 +11,7 @@ async function binaryAdd(db,data){
   if(db.major===4){db.binaries=db.binaries||[];db.binaries.push({flags:0,data});return String(db.binaries.length-1);}
   const meta=X.kid(db.xml,'Meta');const pool=X.ensure(meta,'Binaries');const ids=X.kids(pool,'Binary').map(b=>+b.attrs.ID);const ref=String(ids.length?Math.max(...ids)+1:0);
   X.append(pool,X.el('Binary',b64(await gzip(data)),{ID:ref,Compressed:'True'}));return ref;}
-async function mergeDb(local,other){
+async function mergeDb(local,other,opts){const D=(opts&&opts.decisions)||{};
   const st={added:0,updated:0,deleted:0,groups:0,moved:0};
   const U=el=>X.text(X.kid(el,'UUID'));
   const lroot=X.kid(X.kid(local.xml,'Root'),'Group'),oroot=X.kid(X.kid(other.xml,'Root'),'Group');
@@ -53,24 +53,51 @@ async function mergeDb(local,other){
   // Einträge
   const oEntries=[];(function w(g){if(skipped.has(g))return;for(const e of X.kids(g,'Entry'))oEntries.push(e);for(const c of X.kids(g,'Group'))w(c);})(oroot);
   const histUnion=(list)=>{const m=new Map();for(const h of list){const k=tm(local,h,'LastModificationTime');if(!m.has(k))m.set(k,h);}return [...m.entries()].sort((a,b)=>a[0]-b[0]).map(x=>x[1]);};
-  for(const oe of oEntries){const u=U(oe);const le=lE.get(u);
+  for(const oe of oEntries){const u=U(oe);const le=lE.get(u);const d=D[u];if(d==='skip')continue;
     if(!le){if(lDel.has(u)&&lDel.get(u)>=tm(other,oe,'LastModificationTime'))continue;
       const g=await ensureGroup(oe.parent);const ne=await importEl(oe);insertE(g,ne);lE.set(u,ne);st.added++;continue;}
     const lm=tm(local,le,'LastModificationTime'),om=tm(other,oe,'LastModificationTime');
     const oHist=[];for(const h of X.kids(X.kid(oe,'History'),'Entry'))oHist.push(await importEl(h));
     const lHist=X.kids(X.kid(le,'History'),'Entry');
     let target=le,extra=[];
-    if(om>lm){const ne=await importEl(oe);const cur=X.clone(le,null);const ch=X.kid(cur,'History');if(ch)X.remove(ch);extra.push(cur);
+    const takeOther=d==='other'||(d!=='local'&&om>lm),keepLocal=!takeOther&&(d==='local'||om<lm);
+    if(takeOther){const ne=await importEl(oe);const cur=X.clone(le,null);const ch=X.kid(cur,'History');if(ch)X.remove(ch);extra.push(cur);
       const p=le.parent;const i=p.children.indexOf(le);p.children[i]=ne;ne.parent=p;le.parent=null;target=ne;lE.set(u,ne);st.updated++;}
-    else if(om<lm){const oc=await importEl(oe);const ch=X.kid(oc,'History');if(ch)X.remove(ch);extra.push(oc);}
+    else if(keepLocal){const oc=await importEl(oe);const ch=X.kid(oc,'History');if(ch)X.remove(ch);extra.push(oc);if(om>=lm)X.setText(X.ensure(X.ensure(le,'Times'),'LastModificationTime'),timeStr(local,new Date()));}
     const all=histUnion([...lHist,...oHist,...extra]).filter(h=>tm(local,h,'LastModificationTime')!==tm(local,target,'LastModificationTime'));
     const H=X.ensure(target,'History');H.children=[];for(const h of (maxHist>=0?all.slice(-maxHist):all))X.append(H,h);
     const lpar=lG.get(U(oe.parent));
-    if(lpar&&target.parent!==lpar&&tm(other,oe,'LocationChanged')>tm(local,target,'LocationChanged')){X.remove(target);insertE(lpar,target);st.moved++;}}
+    if(d!=='nomove'&&lpar&&target.parent!==lpar&&tm(other,oe,'LocationChanged')>tm(local,target,'LocationChanged')){X.remove(target);insertE(lpar,target);st.moved++;}}
   // Löschungen aus der anderen Datei übernehmen
   const lDelRoot=X.ensure(X.kid(local.xml,'Root'),'DeletedObjects');
   for(const [u,t] of oDel){const le=lE.get(u);
-    if(le&&le.parent&&tm(local,le,'LastModificationTime')<=t){X.remove(le);st.deleted++;}
+    if(le&&le.parent&&tm(local,le,'LastModificationTime')<=t){if(D[u]==='keep'){X.setText(X.ensure(X.ensure(le,'Times'),'LastModificationTime'),timeStr(local,new Date()));}else{X.remove(le);st.deleted++;}}
     const lg=lG.get(u);if(lg&&lg!==lroot&&lg.parent&&tm(local,lg,'LastModificationTime')<=t&&!X.kids(lg,'Entry').length&&!X.kids(lg,'Group').length){X.remove(lg);}
     if(!lDel.has(u)){const d=X.el('DeletedObject');X.append(d,X.el('UUID',u));X.append(d,X.el('DeletionTime',timeStr(local,new Date(t))));X.append(lDelRoot,d);}}
   return st;}
+
+// Vorschau: ermittelt, was ein Zusammenführen ändern würde – ohne etwas zu verändern.
+function planMerge(local,other){
+  const U=el=>X.text(X.kid(el,'UUID'));
+  const tm=(db,el,k)=>{const d=parseTime(db,X.text(X.kid(X.kid(el,'Times'),k)));return d?Math.floor(d.getTime()/1000):0;};
+  const all=(g,out=[])=>{for(const e of X.kids(g,'Entry'))out.push(e);for(const c of X.kids(g,'Group'))all(c,out);return out;};
+  const groups=(g,out=[])=>{for(const c of X.kids(g,'Group')){out.push(c);groups(c,out);}return out;};
+  const lroot=X.kid(X.kid(local.xml,'Root'),'Group'),oroot=X.kid(X.kid(other.xml,'Root'),'Group');
+  const lE=new Map(all(lroot).map(e=>[U(e),e])),lG=new Map(groups(lroot).map(g=>[U(g),g]));lG.set(U(oroot),lroot);
+  const delMap=db=>{const m=new Map();for(const d of X.kids(X.kid(X.kid(db.xml,'Root'),'DeletedObjects'),'DeletedObject')){const t=parseTime(db,X.text(X.kid(d,'DeletionTime')));m.set(X.text(X.kid(d,'UUID')),t?Math.floor(t.getTime()/1000):0);}return m;};
+  const lDel=delMap(local),oDel=delMap(other);
+  const hist=(db,e)=>new Set(X.kids(X.kid(e,'History'),'Entry').map(h=>tm(db,h,'LastModificationTime')));
+  const plan={added:[],updated:[],conflicts:[],localNewer:[],deleted:[],moved:[],groups:[]};
+  for(const og of groups(oroot)){const u=U(og);if(!lG.has(u)&&!(lDel.has(u)&&lDel.get(u)>=tm(other,og,'LastModificationTime')))plan.groups.push(og);}
+  for(const oe of all(oroot)){const u=U(oe);const le=lE.get(u);const om=tm(other,oe,'LastModificationTime');
+    if(!le){if(!(lDel.has(u)&&lDel.get(u)>=om))plan.added.push({u,oe});continue;}
+    const lm=tm(local,le,'LastModificationTime');
+    if(om!==lm){
+      if(om>lm&&hist(other,oe).has(lm))plan.updated.push({u,le,oe});
+      else if(lm>om&&hist(local,le).has(om))plan.localNewer.push({u,le,oe});
+      else plan.conflicts.push({u,le,oe,newer:om>lm?'other':'local',lm,om});}
+    const lpar=lG.get(U(oe.parent));
+    if(lpar&&le.parent!==lpar&&tm(other,oe,'LocationChanged')>tm(local,le,'LocationChanged'))plan.moved.push({u,le,oe,to:lpar});}
+  for(const [u,t] of oDel){const le=lE.get(u);if(le&&le.parent&&tm(local,le,'LastModificationTime')<=t)plan.deleted.push({u,le,t});}
+  plan.changes=plan.added.length+plan.updated.length+plan.conflicts.length+plan.deleted.length+plan.moved.length+plan.groups.length;
+  return plan;}

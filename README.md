@@ -21,14 +21,17 @@
 | Formats | KDBX 3.1 and 4.x · AES-256 and ChaCha20 · Argon2d/id and AES-KDF · key files |
 | Speed | Argon2 in WebAssembly (about 10× faster than plain JavaScript) with selectable strength |
 | Entries | Groups, custom fields, attachments, history with visual diffs, recycle bin, undo |
-| Security | Security report and score, password rotation assistant, re-authentication for sensitive entries, auto-lock, clipboard clearing |
+| Security | Security report and score, password policies per group, password rotation assistant, re-authentication for sensitive entries, auto-lock, clipboard clearing |
 | 2FA & passkeys | TOTP codes (KeePassXC, KeePass 2 and KeeOtp formats) · stores KeePassXC/Strongbox passkeys |
-| Productivity | Command palette (⌘K), keyboard navigation, drag & drop, multi-select, favourites, customisable entry categories |
-| Data | Merge two versions of a database · CSV import (Bitwarden, 1Password, LastPass, Chrome, Firefox, Apple, KeePassXC) · CSV export |
+| Productivity | Activity timeline, command palette (⌘K), keyboard navigation, drag & drop, multi-select, favourites, customisable entry categories |
+| Data | Merge two versions of a database with a preview and per-entry conflict resolution · CSV import (Bitwarden, 1Password, LastPass, Chrome, Firefox, Apple, KeePassXC) · CSV export |
+| Customers | Customer files with contacts, devices, deadlines and maintenance log · printable customer data sheet |
 | Languages | English and German interface, passphrase word lists in both languages |
 | Sharing & print | Export a group as its own encrypted database · Wi-Fi cards with QR code · emergency sheet |
 
 <p align="center"><img src="docs/entry.png" width="66%" alt="Entry view"> <img src="docs/mobile.png" width="24%" alt="Mobile view"></p>
+
+<p align="center"><img src="docs/customer.png" width="90%" alt="Customer file"></p>
 
 ## Getting started
 
